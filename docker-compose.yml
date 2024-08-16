@@ -1,0 +1,57 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: "${DATABASE_USER}"
+      POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
+      POSTGRES_MULTIPLE_DATABASES: "${DATABASE_NAME_PREFIX}_1,${DATABASE_NAME_PREFIX}_2"
+    volumes:
+      - ./scripts/docker-postgresql-multiple-databases:/docker-entrypoint-initdb.d
+      - database-volume:/var/lib/postgresql/data
+
+  liquibase_shard_1:
+    image: liquibase/liquibase
+    volumes:
+      - ./docker/liquibase/migrations:/liquibase/changelog
+    command:
+      [
+        "liquibase",
+        "--username=${DATABASE_USER}",
+        "--password=${DATABASE_PASSWORD}",
+        "--changeLogFile=changelog/db.changelog-root.xml",
+        "--url=${DATABASE_URL}_1",
+        "update"
+      ]
+    depends_on:
+      - postgres
+
+  liquibase_shard_2:
+    image: liquibase/liquibase
+    volumes:
+      - ./docker/liquibase/migrations:/liquibase/changelog
+    command:
+      [
+        "liquibase",
+        "--username=${DATABASE_USER}",
+        "--password=${DATABASE_PASSWORD}",
+        "--changeLogFile=changelog/db.changelog-root.xml",
+        "--url=${DATABASE_URL}_2",
+        "update"
+      ]
+    depends_on:
+      - postgres
+
+  api:
+    build: .
+    ports:
+      - "3005:3005"
+    depends_on:
+      - liquibase_shard_1
+      - liquibase_shard_2
+      - postgres
+volumes:
+  database-volume:
+networks:
+  default:
+    name: clearway-task-assets-service-network
