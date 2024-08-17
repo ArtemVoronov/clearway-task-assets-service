@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type ServerConfig struct {
+type HttpServerConfig struct {
 	Host                    string
 	CertificateFilePath     string
 	KeyFilePath             string
@@ -19,15 +19,7 @@ type ServerConfig struct {
 	GracefulShutdownTimeout time.Duration
 }
 
-type FuncSetup func()
-
-type FuncShutdown func()
-
-func Start(config *ServerConfig, routes *http.ServeMux, setup FuncSetup, shutdown FuncShutdown) {
-	if setup != nil {
-		setup()
-	}
-
+func StartHttpServer(config *HttpServerConfig, routes *http.ServeMux, shutdown func()) {
 	if shutdown != nil {
 		defer shutdown()
 	}

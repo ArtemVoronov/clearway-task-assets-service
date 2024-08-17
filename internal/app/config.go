@@ -16,65 +16,52 @@ const (
 	DefaultHttpServerWriteTimeout            = "15m"
 	DefaultHttpServerGracefulShutdownTimeout = "2m"
 	DefaultAppRestApiPort                    = "3005"
+	DefaultDatabaseQueryTimeout              = "30s"
 )
 
 var configRowRegExp = regexp.MustCompile(`(.+)=(.+)`)
 
-func InitAppConfig() (*ServerConfig, error) {
+func SetUpEnvVarsFromConfig() error {
 	configFilePath, ok := os.LookupEnv("CONFIG_FILE_PATH")
 	if !ok {
 		configFilePath = DefaultConfigFilePath
 	}
 
-	envConfig, err := ReadEnvConfig(configFilePath)
+	data, err := os.ReadFile(configFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read env file: %w", err)
+		return fmt.Errorf("unable to read file '%v': %w", configFilePath, err)
 	}
 
-	config, err := ParseEnvConfiguration(envConfig)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse env file: %w", err)
-	}
-
-	return config, nil
-}
-
-func ReadEnvConfig(pathToEnvFile string) (map[string]string, error) {
-	data, err := os.ReadFile(pathToEnvFile)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read file '%v': %w", pathToEnvFile, err)
-	}
 	input := string(data)
-
 	rows := strings.Split(input, "\n")
-
-	result := make(map[string]string, len(rows))
 	for _, row := range rows {
 		submatches := configRowRegExp.FindStringSubmatch(row)
 		if len(submatches) == 3 {
 			paramName := strings.Trim(submatches[1], " ")
 			paramValue := strings.Trim(submatches[2], " ")
-			result[paramName] = paramValue
+			err := os.Setenv(paramName, paramValue)
+			if err != nil {
+				return fmt.Errorf("unable to set environment variable '%v': %w", err)
+			}
 		}
 	}
-
-	return result, nil
+	return nil
 }
 
-func ParseEnvConfiguration(envConfig map[string]string) (*ServerConfig, error) {
-	host, ok := envConfig["APP_REST_API_PORT"]
+func NewHttpServerConfig() (*HttpServerConfig, error) {
+	host, ok := os.LookupEnv("APP_REST_API_PORT")
 	if !ok {
 		host = DefaultAppRestApiPort
 	}
-	certPath, ok := envConfig["APP_TLS_CERT_PATH"]
+	certPath, ok := os.LookupEnv("APP_TLS_CERT_PATH")
 	if !ok {
 		certPath = DefaultHttpServerCertificateFilePath
 	}
-	keyPath, ok := envConfig["APP_TLS_KEY_PATH"]
+	keyPath, ok := os.LookupEnv("APP_TLS_KEY_PATH")
 	if !ok {
 		keyPath = DefaultHttpServerKeyFilePath
 	}
-	readTimeoutStr, ok := envConfig["APP_SERVER_READ_TIMEOUT"]
+	readTimeoutStr, ok := os.LookupEnv("APP_SERVER_READ_TIMEOUT")
 	if !ok {
 		readTimeoutStr = DefaultHttpServerReadTimeout
 	}
@@ -82,7 +69,7 @@ func ParseEnvConfiguration(envConfig map[string]string) (*ServerConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to configure server read timeout: %w", err)
 	}
-	writeTimeoutStr, ok := envConfig["APP_SERVER_WRITE_TIMEOUT"]
+	writeTimeoutStr, ok := os.LookupEnv("APP_SERVER_WRITE_TIMEOUT")
 	if !ok {
 		writeTimeoutStr = DefaultHttpServerWriteTimeout
 	}
@@ -90,7 +77,7 @@ func ParseEnvConfiguration(envConfig map[string]string) (*ServerConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to configure server write timeout: %w", err)
 	}
-	gracefulShutdownTimeoutStr, ok := envConfig["APP_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT"]
+	gracefulShutdownTimeoutStr, ok := os.LookupEnv("APP_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT")
 	if !ok {
 		gracefulShutdownTimeoutStr = DefaultHttpServerGracefulShutdownTimeout
 	}
@@ -98,7 +85,7 @@ func ParseEnvConfiguration(envConfig map[string]string) (*ServerConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to configure server graceful shutdown timeout: %w", err)
 	}
-	return &ServerConfig{
+	return &HttpServerConfig{
 		Host:                    fmt.Sprintf(":%s", host),
 		CertificateFilePath:     certPath,
 		KeyFilePath:             keyPath,

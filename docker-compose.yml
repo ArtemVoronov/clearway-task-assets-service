@@ -15,32 +15,30 @@ services:
     volumes:
       - ./docker/liquibase/migrations:/liquibase/changelog
     command:
-      [
-        "liquibase",
-        "--username=${DATABASE_USER}",
-        "--password=${DATABASE_PASSWORD}",
-        "--changeLogFile=changelog/db.changelog-root.xml",
-        "--url=${DATABASE_URL}_1",
-        "update"
-      ]
+     - /bin/sh
+     - -c
+     - |
+        echo "sleep 5s"
+        sleep 5
+        liquibase --username=${DATABASE_USER} --password=${DATABASE_PASSWORD} --changeLogFile=changelog/db.changelog-root.xml --url=${DATABASE_URL}_1 update
     depends_on:
       - postgres
+    restart: on-failure
 
   liquibase_shard_2:
     image: liquibase/liquibase
     volumes:
       - ./docker/liquibase/migrations:/liquibase/changelog
     command:
-      [
-        "liquibase",
-        "--username=${DATABASE_USER}",
-        "--password=${DATABASE_PASSWORD}",
-        "--changeLogFile=changelog/db.changelog-root.xml",
-        "--url=${DATABASE_URL}_2",
-        "update"
-      ]
+     - /bin/sh
+     - -c
+     - |
+        echo "sleep 5s"
+        sleep 5
+        liquibase --username=${DATABASE_USER} --password=${DATABASE_PASSWORD} --changeLogFile=changelog/db.changelog-root.xml --url=${DATABASE_URL}_2 update
     depends_on:
       - postgres
+    restart: on-failure
 
   api:
     build: .
@@ -50,6 +48,13 @@ services:
       - liquibase_shard_1
       - liquibase_shard_2
       - postgres
+    restart: always
+    healthcheck:
+      test: curl -sS http://127.0.0.1 || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 3
+
 volumes:
   database-volume:
 networks:

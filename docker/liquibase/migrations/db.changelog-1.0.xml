@@ -29,7 +29,7 @@
             <column name="password_hash" type="varchar(32)">
                 <constraints nullable="false"/>
             </column>
-            <column name="create_date" type="timestamp">
+            <column name="create_date" type="timestamp" defaultValue="NOW()">
                 <constraints nullable="false" />
             </column>
         </createTable>
@@ -40,7 +40,10 @@
             <column name="user_uuid" type="uuid">
                 <constraints nullable="false"/>
             </column>
-            <column name="create_date" type="timestamp">
+            <column name="ip_addr" type="varchar(45)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="create_date" type="timestamp" defaultValue="NOW()">
                 <constraints nullable="false" />
             </column>
         </createTable>
@@ -54,7 +57,7 @@
             <column name="data" type="bytea">
                 <constraints nullable="false"/>
             </column>
-            <column name="create_date" type="timestamp">
+            <column name="create_date" type="timestamp" defaultValue="NOW()">
                 <constraints nullable="false" />
             </column>
         </createTable>

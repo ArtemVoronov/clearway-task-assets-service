@@ -1,49 +1,48 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"time"
 
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1/assets"
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1/auth"
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1/users"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app"
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
 
 func main() {
-	appConfig, err := app.InitAppConfig()
+	readAppConfig()
+	initAppServices()
+
+	httpServerConfig, err := app.NewHttpServerConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("error during server config creating: %s", err)
 	}
 
 	routes := http.NewServeMux()
-	// TODO: init routes for auth and assets
-	routes.HandleFunc("/", processCommon)
+	// TODO: add tech endpoints
+	routes.HandleFunc("/api/auth", auth.ProcessAuthRoute)
+	routes.HandleFunc("/api/users", users.ProcessUsersRoute)
+	routes.HandleFunc("/api/assets", assets.ProcessAssetsRoute)
+	routes.HandleFunc("/api/assets/:name", assets.ProcessAssetsRoute)
+	routes.HandleFunc("/api/upload-assets/:name", assets.ProcessAssetsRoute)
 
-	app.Start(appConfig, routes, setup, shutdown)
+	app.StartHttpServer(httpServerConfig, routes, onShutdown)
 }
 
-func setup() {
-	// TODO: clean and setup services
-	fmt.Println("setup")
-}
-
-func shutdown() {
-	// TODO: clean and shutdown services
-	fmt.Println("shutdown")
-	time.Sleep(2 * time.Second)
-}
-
-// TODO: remove, add appropriate handlers for each REST endpoint
-func processCommon(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("request RemoteAddr: %v\n", r.RemoteAddr)
-	contentLength, ok := r.Header["Content-Length"]
-	if ok {
-		fmt.Printf("header Content-Length: %v\n", contentLength)
+func readAppConfig() {
+	err := app.SetUpEnvVarsFromConfig()
+	if err != nil {
+		log.Fatalf("error during app config reading: %s", err)
 	}
-	authHeader, ok := r.Header["Authorization"]
-	if ok {
-		fmt.Printf("header Content-Length: %v\n", authHeader)
-	}
-	w.Write([]byte(fmt.Sprintf("got: %s\n", r.URL)))
-	w.WriteHeader(200)
+}
+
+func initAppServices() {
+	services.Instance()
+}
+
+func onShutdown() {
+	err := services.Instance().Shutdown()
+	log.Fatalf("error during services shutdown: %s", err)
 }
