@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   postgres:
+    container_name: assets-service-database
     image: postgres
     environment:
       POSTGRES_USER: "${DATABASE_USER}"
@@ -24,6 +25,11 @@ services:
     depends_on:
       - postgres
     restart: on-failure
+    healthcheck:
+      test: curl -sS http://127.0.0.1 || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 3
 
   liquibase_shard_2:
     image: liquibase/liquibase
@@ -39,9 +45,15 @@ services:
     depends_on:
       - postgres
     restart: on-failure
+    healthcheck:
+      test: curl -sS http://127.0.0.1 || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 3
 
   api:
     build: .
+    container_name: assets-service-api
     ports:
       - "3005:3005"
     depends_on:

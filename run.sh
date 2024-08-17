@@ -13,6 +13,11 @@ build() {
     docker-compose build api
 }
 
+# there could be an error with database initiation at first time
+allowExecuteDatabaseScripts() {
+    chmod 777 scripts/docker-postgresql-multiple-databases/create-multiple-postgresql-databases.sh
+}
+
 start() {
     docker-compose up -d
 }
@@ -27,15 +32,16 @@ generateSelfSignedCerts() {
 }
 
 db1() {
-    docker exec -it clearway-task-assets-service_postgres_1 psql -d assets_service_db_1 -U assets_service_user
+    docker exec -it assets-service-database psql -d assets_service_db_1 -U assets_service_user
 }
 
 db2() {
-    docker exec -it clearway-task-assets-service_postgres_1 psql -d assets_service_db_2 -U assets_service_user
+    docker exec -it assets-service-database psql -d assets_service_db_2 -U assets_service_user
 }
 case "$1" in
   start)
     down
+    allowExecuteDatabaseScripts
     build
     start
     tail
