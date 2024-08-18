@@ -1,10 +1,10 @@
-package auth
+package v1
 
 import (
 	"net/http"
 )
 
-func ProcessAuthRoute(w http.ResponseWriter, r *http.Request) {
+func authenicate(w http.ResponseWriter, r *http.Request) {
 	// TODO:
 	// fmt.Printf("request RemoteAddr: %v\n", r.RemoteAddr)
 	// contentLength, ok := r.Header["Content-Length"]
@@ -17,5 +17,5 @@ func ProcessAuthRoute(w http.ResponseWriter, r *http.Request) {
 	// }
 	// w.Write([]byte(fmt.Sprintf("got: %s\n", r.URL)))
 	// w.WriteHeader(200)
-	http.Error(w, "Not Implemented", 501)
+	http.Error(w, "Not Implemented", http.StatusNotImplemented)
 }

@@ -4,9 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1/assets"
-	"github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1/auth"
-	"github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1/users"
+	v1 "github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
@@ -20,13 +18,7 @@ func main() {
 		log.Fatalf("error during server config creating: %s", err)
 	}
 
-	routes := http.NewServeMux()
-	// TODO: add tech endpoints
-	routes.HandleFunc("/api/auth", auth.ProcessAuthRoute)
-	routes.HandleFunc("/api/users", users.ProcessUsersRoute)
-	routes.HandleFunc("/api/assets", assets.ProcessAssetsRoute)
-	routes.HandleFunc("/api/assets/:name", assets.ProcessAssetsRoute)
-	routes.HandleFunc("/api/upload-assets/:name", assets.ProcessAssetsRoute)
+	routes := initRestApiRoutes()
 
 	app.StartHttpServer(httpServerConfig, routes, onShutdown)
 }
@@ -40,6 +32,13 @@ func readAppConfig() {
 
 func initAppServices() {
 	services.Instance()
+}
+
+func initRestApiRoutes() *http.ServeMux {
+	routes := http.NewServeMux()
+	// TODO: add tech endpoints
+	routes.HandleFunc("/", v1.HandleRoute)
+	return routes
 }
 
 func onShutdown() {

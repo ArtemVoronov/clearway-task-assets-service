@@ -54,8 +54,8 @@
             <column name="user_uuid" type="uuid">
                 <constraints nullable="false"/>
             </column>
-            <column name="data" type="bytea">
-                <constraints nullable="false"/>
+            <column name="file_id" type="oid">
+                <constraints nullable="false" unique="true"/>
             </column>
             <column name="create_date" type="timestamp" defaultValue="NOW()">
                 <constraints nullable="false" />

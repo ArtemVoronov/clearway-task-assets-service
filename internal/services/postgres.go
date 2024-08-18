@@ -11,6 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	DuplicateErrorCode = "23505"
+)
+
 type PostgreSQLService struct {
 	ConnectionsPool *pgxpool.Pool
 	queryTimeout    time.Duration

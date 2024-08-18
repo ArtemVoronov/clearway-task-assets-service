@@ -1,10 +1,9 @@
-package users
+package v1
 
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
@@ -20,22 +19,22 @@ func ProcessUsersRoute(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		createUser(w, r)
 	default:
-		http.Error(w, "Not Implemented", 501)
+		http.Error(w, "Not Implemented", http.StatusNotImplemented)
 	}
 }
 
 func createUser(w http.ResponseWriter, r *http.Request) {
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	var user UserDTO
 	err = json.Unmarshal(b, &user)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -43,12 +42,13 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrDuplicateUser):
-			http.Error(w, "User exists already", 400)
+			http.Error(w, "User exists already", http.StatusBadRequest)
 		default:
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+		return
 	}
 
-	w.Write([]byte(fmt.Sprintf("Done\n")))
-	w.WriteHeader(200)
+	w.Write([]byte("Done"))
+	w.WriteHeader(http.StatusOK)
 }

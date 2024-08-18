@@ -10,8 +10,9 @@ import (
 )
 
 type Services struct {
-	UsersService *UsersService
-	pgServices   []*PostgreSQLService
+	UsersService  *UsersService
+	AssetsService *AssetsService
+	pgServices    []*PostgreSQLService
 }
 
 var once sync.Once
@@ -37,8 +38,9 @@ func createServices() (*Services, error) {
 	}
 
 	return &Services{
-		pgServices:   pgServices,
-		UsersService: CreateUsersService(pgServices),
+		pgServices:    pgServices,
+		UsersService:  CreateUsersService(pgServices),
+		AssetsService: CreateAssetsService(pgServices),
 	}, nil
 }
 
@@ -65,11 +67,12 @@ func initPostgreServices() ([]*PostgreSQLService, error) {
 	}
 
 	// TODO: add parameters for pool configuration
+	pgPoolParams := "?pool_max_conns=100"
 
 	pgServices := make([]*PostgreSQLService, 0, DEFAULT_BUCKET_FACTOR)
 	for i := 1; i <= DEFAULT_BUCKET_FACTOR; i++ {
 		pgDatabase := fmt.Sprintf("%v_%v", pgDatabasePrefix, i)
-		connString := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", pgUser, pgPassword, pgHost, pgPort, pgDatabase)
+		connString := fmt.Sprintf("postgres://%v:%v@%v:%v/%v%v", pgUser, pgPassword, pgHost, pgPort, pgDatabase, pgPoolParams)
 		pgService, err := CreatePostgreSQLService(connString)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create postgresql service for '%v': %w", pgDatabase, err)
@@ -87,6 +90,14 @@ func (s *Services) Shutdown() error {
 		if err != nil {
 			result = append(result, err)
 		}
+	}
+	err := s.UsersService.Shutdown()
+	if err != nil {
+		result = append(result, err)
+	}
+	err = s.AssetsService.Shutdown()
+	if err != nil {
+		result = append(result, err)
 	}
 	if len(result) > 0 {
 		errors.Join(result...)

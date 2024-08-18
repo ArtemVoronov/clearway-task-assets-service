@@ -2,20 +2,17 @@ package services
 
 import (
 	"context"
-	"crypto/md5"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app/utils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const (
-	createUserQuery = `INSERT INTO users (uuid, login, password_hash) VALUES ($1, $2, $3)`
-
-	duplicateErrorCode = "23505"
+	createUserQuery          = `INSERT INTO users (uuid, login, password_hash) VALUES ($1, $2, $3)`
+	findUserUUIDByLoginQuery = `SELECT uuid FROM users WHERE login = $1`
 )
 
 var ErrDuplicateUser = errors.New("duplicate user")
@@ -54,19 +51,19 @@ func (s *UsersService) CreateUser(login string, password string) error {
 		return ErrDuplicateUser
 	}
 
-	userUuid, err := newPseudoUUID()
+	userUuid, err := utils.PseudoUUID()
 	if err != nil {
 		return fmt.Errorf("unable to create uuid for user: %w", err)
 	}
 
 	err = s.client(userUuid).TxVoid(
 		func(tx pgx.Tx, ctx context.Context, cancel context.CancelFunc) error {
-			_, internalErr := tx.Exec(ctx, createUserQuery, userUuid, login, getMD5Hash(password))
+			_, internalErr := tx.Exec(ctx, createUserQuery, userUuid, login, utils.MD5Hash(password))
 			if internalErr != nil {
 				var pgErr *pgconn.PgError
 				switch {
 				case errors.As(internalErr, &pgErr):
-					if pgErr.Code == duplicateErrorCode {
+					if pgErr.Code == DuplicateErrorCode {
 						return ErrDuplicateUser
 					} else {
 						return fmt.Errorf("unable to insert user with login '%v': %w", login, internalErr)
@@ -74,7 +71,6 @@ func (s *UsersService) CreateUser(login string, password string) error {
 				default:
 					return fmt.Errorf("unable to insert user with login '%v': %w", login, internalErr)
 				}
-
 			}
 			return nil
 		},
@@ -99,7 +95,6 @@ func (s *UsersService) CheckUserExistence(login string) (bool, error) {
 			pgx.TxOptions{
 				IsoLevel: pgx.ReadCommitted,
 			})()
-
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				continue
@@ -117,19 +112,4 @@ func (s *UsersService) CheckUserExistence(login string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func getMD5Hash(text string) string {
-	hash := md5.Sum([]byte(text))
-	return hex.EncodeToString(hash[:])
-}
-
-// just because we can't use external lib (like "github.com/google/uuid")
-func newPseudoUUID() (string, error) {
-	b := make([]byte, 16)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%X-%X-%X-%X-%X", b[0:4], b[4:6], b[6:8], b[8:10], b[10:]), nil
 }
