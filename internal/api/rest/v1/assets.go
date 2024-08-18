@@ -14,11 +14,6 @@ import (
 // TODO: clean
 const uuid_test = "1F615C1D-6BAE-4D8F-EF0B-2FCDC247EF69"
 
-// TODO: raise to 4GB?
-const MaxSizeBody = 1024*1024*1024 - 1024 // 1 GB - 1 KB
-// TODO: clean
-// const MaxSizeBody = 1024 * 1024 * 2 // 2 MB
-
 func loadAsset(w http.ResponseWriter, r *http.Request) {
 	assetName := getField(r, 0)
 	log.Printf("attempt to load asset '%v'\n", assetName)
@@ -52,16 +47,15 @@ func loadAsset(w http.ResponseWriter, r *http.Request) {
 func storeAsset(w http.ResponseWriter, r *http.Request) {
 	assetName := getField(r, 0)
 	log.Printf("attempt to store asset '%v'\n", assetName)
-	// TODO: wrap MaxBytesReader for all request
-	r.Body = http.MaxBytesReader(w, r.Body, MaxSizeBody)
+
+	// TODO: clean
+	contentType := r.Header.Get("Content-Type")
+	fmt.Printf("Content-Type: %v\n", contentType)
 
 	// TODO: need additional processing for the following mimes
 	// mulipart/form-data
 	// application/x-www-form-urlencoded
 
-	// TODO: clean
-	contentType := r.Header.Get("Content-Type")
-	fmt.Printf("Content-Type: %v\n", contentType)
 	// Parse our multipart form, 10 << 20 specifies a maximum upload of 10 MB files.
 	// r.ParseMultipartForm(10 << 20)
 	// FormFile returns the first file for the given key `myFile`

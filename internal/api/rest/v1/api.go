@@ -2,23 +2,37 @@ package v1
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"sync"
 )
 
+// we allow to upload files up to 4 GB
+const MaxSizeBody = 1024 * 1024 * 1024 * 4
+
 func HandleRoute(w http.ResponseWriter, r *http.Request) {
+	isExceeded, err := isBodyLimitExceeded(r)
+	if err != nil {
+		http.Error(w, "Unexpected error during verifying body size", http.StatusInternalServerError)
+		return
+	}
+	if isExceeded {
+		http.Error(w, fmt.Sprintf("Body size exceeds the limit in %v bytes", MaxSizeBody), http.StatusBadRequest)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, MaxSizeBody)
+
 	var h http.Handler
 	var assetName string
 	p := r.URL.Path
 	switch {
 	case matchAndAssignVars(p, "/api/asset/([^/]+)", &assetName):
-		ctx := context.WithValue(r.Context(), ctxKey{}, []string{assetName})
-		r = r.WithContext(ctx)
+		r = withPathParams(r, []string{assetName})
 		h = allowMethod(loadAsset, "GET")
 	case matchAndAssignVars(p, "/api/upload-asset/([^/]+)", &assetName):
-		ctx := context.WithValue(r.Context(), ctxKey{}, []string{assetName})
-		r = r.WithContext(ctx)
+		r = withPathParams(r, []string{assetName})
 		h = allowMethod(storeAsset, "POST")
 	case matchAndAssignVars(p, "/api/auth"):
 		h = allowMethod(authenicate, "POST")
@@ -29,6 +43,25 @@ func HandleRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.ServeHTTP(w, r)
+}
+
+func isBodyLimitExceeded(r *http.Request) (bool, error) {
+	contentLength := r.Header.Get("Content-Length")
+	if len(contentLength) == 0 {
+		return false, nil
+	}
+
+	bodyLength, err := strconv.Atoi(contentLength)
+	if err != nil {
+		return false, fmt.Errorf("unable to parse Content-Length header: %w", err)
+	}
+
+	return bodyLength > MaxSizeBody, nil
+}
+
+func withPathParams(r *http.Request, params []string) *http.Request {
+	ctx := context.WithValue(r.Context(), ctxKey{}, params)
+	return r.WithContext(ctx)
 }
 
 type ctxKey struct{}

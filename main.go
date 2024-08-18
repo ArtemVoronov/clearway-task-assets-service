@@ -3,15 +3,19 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"time"
 
 	v1 "github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app"
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app/utils"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
 
 func main() {
 	readAppConfig()
 	initAppServices()
+	initAppMonitoring()
 
 	httpServerConfig, err := app.NewHttpServerConfig()
 	if err != nil {
@@ -44,4 +48,20 @@ func initRestApiRoutes() *http.ServeMux {
 func onShutdown() {
 	err := services.Instance().Shutdown()
 	log.Fatalf("error during services shutdown: %s", err)
+}
+
+func initAppMonitoring() {
+	enableRuntimeMonitoring, ok := os.LookupEnv("APP_ENABLE_RUNTIME_MONITORING")
+	if !ok {
+		enableRuntimeMonitoring = "false"
+	}
+
+	if enableRuntimeMonitoring == "true" {
+		go func() {
+			for {
+				time.Sleep(5 * time.Second)
+				utils.PrintMemUsage()
+			}
+		}()
+	}
 }
