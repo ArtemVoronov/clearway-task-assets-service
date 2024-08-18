@@ -7,10 +7,9 @@ import (
 	"regexp"
 	"strconv"
 	"sync"
-)
 
-// we allow to upload files up to 4 GB
-const MaxSizeBody = 1024 * 1024 * 1024 * 4
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app"
+)
 
 func HandleRoute(w http.ResponseWriter, r *http.Request) {
 	isExceeded, err := isBodyLimitExceeded(r)
@@ -19,10 +18,10 @@ func HandleRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isExceeded {
-		http.Error(w, fmt.Sprintf("Body size exceeds the limit in %v bytes", MaxSizeBody), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Body size exceeds the limit in %v bytes", app.DefaultBodyMaxSize), http.StatusBadRequest)
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, MaxSizeBody)
+	r.Body = http.MaxBytesReader(w, r.Body, app.DefaultBodyMaxSize)
 
 	var h http.Handler
 	var assetName string
@@ -56,7 +55,7 @@ func isBodyLimitExceeded(r *http.Request) (bool, error) {
 		return false, fmt.Errorf("unable to parse Content-Length header: %w", err)
 	}
 
-	return bodyLength > MaxSizeBody, nil
+	return bodyLength > app.DefaultBodyMaxSize, nil
 }
 
 func withPathParams(r *http.Request, params []string) *http.Request {

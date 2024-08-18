@@ -64,7 +64,7 @@ func (s *AssetsService) CreateAsset(name string, userUuid string, file io.Reader
 				switch {
 				case errors.As(internalErr, &pgErr):
 					if pgErr.Code == DuplicateErrorCode {
-						return ErrDuplicateAsset
+						return fmt.Errorf("asset '%v' error: %w", name, ErrDuplicateAsset)
 					} else {
 						return fmt.Errorf("user '%v' unable to insert assert with name '%v': %w", userUuid, name, internalErr)
 					}
@@ -119,7 +119,7 @@ func (s *AssetsService) GetAsset(name string, userUuid string, startStreaming St
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return ErrNotFoundAsset
+			return fmt.Errorf("asset '%v' error: %w", name, ErrNotFoundAsset)
 		}
 		return fmt.Errorf("unable to get asset: %w", err)
 	}

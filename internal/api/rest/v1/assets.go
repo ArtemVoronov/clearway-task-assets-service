@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
@@ -13,6 +16,8 @@ import (
 
 // TODO: clean
 const uuid_test = "1F615C1D-6BAE-4D8F-EF0B-2FCDC247EF69"
+
+var boundaryStringRegExp = regexp.MustCompile("^.+boundary=(.+)$")
 
 func loadAsset(w http.ResponseWriter, r *http.Request) {
 	assetName := getField(r, 0)
@@ -26,7 +31,7 @@ func loadAsset(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrNotFoundAsset):
-			http.Error(w, "Asset not found", http.StatusNotFound)
+			http.Error(w, err.Error(), http.StatusNotFound)
 		default:
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -46,47 +51,79 @@ func loadAsset(w http.ResponseWriter, r *http.Request) {
 
 func storeAsset(w http.ResponseWriter, r *http.Request) {
 	assetName := getField(r, 0)
-	log.Printf("attempt to store asset '%v'\n", assetName)
-
-	// TODO: clean
 	contentType := r.Header.Get("Content-Type")
-	fmt.Printf("Content-Type: %v\n", contentType)
-
-	// TODO: need additional processing for the following mimes
-	// mulipart/form-data
-	// application/x-www-form-urlencoded
-
-	// Parse our multipart form, 10 << 20 specifies a maximum upload of 10 MB files.
-	// r.ParseMultipartForm(10 << 20)
-	// FormFile returns the first file for the given key `myFile`
-	// it also returns the FileHeader so we can get the Filename,
-	// the Header and the size of the file
-	// fmt.Println("upload file stage")
-	// file, _, err := r.FormFile("myFile")
-	// // file, handler, err := r.FormFile("myFile")
-	// if err != nil {
-	// 	http.Error(w, fmt.Sprintf("Error Retrieving the File: %v", err.Error()), http.StatusInternalServerError)
-	// 	return
-	// }
-	// defer file.Close()
-	// fmt.Printf("Uploaded File: %+v\n", handler.Filename)
-	// fmt.Printf("File Size: %+v\n", handler.Size)
-	// fmt.Printf("MIME Header: %+v\n", handler.Header)
-
-	// TODO: get real uuid after finishing the debugging
-	err := services.Instance().AssetsService.CreateAsset(assetName, uuid_test, r.Body)
-
-	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrDuplicateAsset):
-			http.Error(w, "Asset exists already", http.StatusBadRequest)
-		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		log.Println("special case of mime type: multipart/form-data")
+		err := storeMultipartedAssets(contentType, r)
+		if err != nil {
+			processStoreAsserError(err, w)
+			return
 		}
-		return
+	} else if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+		log.Println("special case of mime type: application/x-www-form-urlencoded")
+		log.Printf("attempt to store urlencoded assets '%v'\n", assetName) // log each parameter
+		// TODO: parse body and store each asset separately
+	} else {
+		log.Println("default case for others mime types")
+		log.Printf("attempt to store asset '%v'\n", assetName)
+		err := storeOneAsset(assetName, r.Body)
+		if err != nil {
+			processStoreAsserError(err, w)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"status":"ok"}`))
 	w.WriteHeader(http.StatusCreated)
+}
+
+func storeOneAsset(assetName string, reader io.Reader) error {
+	// TODO: get real uuid after finishing the debugging
+	return services.Instance().AssetsService.CreateAsset(assetName, uuid_test, reader)
+}
+
+func storeMultipartedAssets(contentType string, r *http.Request) error {
+	boundaryString, err := parseBoundaryString(contentType)
+	if err != nil {
+		return err
+	}
+
+	partReader := multipart.NewReader(r.Body, boundaryString)
+	for {
+		p, err := partReader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		miltipartedAssetName := p.FormName()
+		log.Printf("attempt to store mutliparted asset '%v'\n", miltipartedAssetName)
+		err = storeOneAsset(miltipartedAssetName, p)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func processStoreAsserError(err error, w http.ResponseWriter) {
+	switch {
+	case errors.Is(err, services.ErrDuplicateAsset):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func parseBoundaryString(contentTypeString string) (string, error) {
+	matches := boundaryStringRegExp.FindStringSubmatch(contentTypeString)
+
+	actualMathchesCount := len(matches)
+	if actualMathchesCount != 2 {
+		return "", fmt.Errorf("wrong len of matches")
+	}
+	result := matches[1]
+	return result, nil
 }

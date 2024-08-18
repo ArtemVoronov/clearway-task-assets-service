@@ -17,6 +17,13 @@ const (
 	DefaultHttpServerGracefulShutdownTimeout = "2m"
 	DefaultAppRestApiPort                    = "3005"
 	DefaultDatabaseQueryTimeout              = "30s"
+
+	// Current implementation of assets storing is based on large objects (see for details https://www.postgresql.org/docs/current/largeobjects.html).
+	// A large object cannot exceed 4TB for PostgreSQL 9.3 or newer or 2GB for older versions.
+	// Body max size should be configurable for different environments with appropriate system resources.
+	// Body could contain multiple files which in sum should not exceed above limits.
+	// TODO: add configuration of body max size
+	DefaultBodyMaxSize = 1024 * 1024 * 1024 * 10 // 10 GB
 )
 
 var configRowRegExp = regexp.MustCompile(`(.+)=(.+)`)
@@ -41,7 +48,7 @@ func SetUpEnvVarsFromConfig() error {
 			paramValue := strings.Trim(submatches[2], " ")
 			err := os.Setenv(paramName, paramValue)
 			if err != nil {
-				return fmt.Errorf("unable to set environment variable '%v': %w", err)
+				return fmt.Errorf("unable to set environment variable '%v': %w", paramName, err)
 			}
 		}
 	}
