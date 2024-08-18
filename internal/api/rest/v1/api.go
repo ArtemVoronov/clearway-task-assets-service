@@ -27,6 +27,8 @@ func HandleRoute(w http.ResponseWriter, r *http.Request) {
 	var assetName string
 	p := r.URL.Path
 	switch {
+	case matchAndAssignVars(p, "/api/assetList"):
+		h = allowMethod(loadAssetsList, "GET")
 	case matchAndAssignVars(p, "/api/asset/([^/]+)", &assetName):
 		r = withPathParams(r, []string{assetName})
 		h = allowMethod(loadAsset, "GET")

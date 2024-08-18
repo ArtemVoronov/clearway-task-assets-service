@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,10 +15,41 @@ import (
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
 
-// TODO: clean
+// TODO: check error cases, add appopriate tests
+// 1. user not found
+// 2. token is expired
+// 3. too large file
+// 4. file is not belonds to the user
+// 5. user exceed the limits (3 types of limit: max 100 files, for each file 4GB, for total space 15GB)
+// 6. delete user with files
+// 7. delete file without user
+
+// TODO: clean and get it from token
 const uuid_test = "1F615C1D-6BAE-4D8F-EF0B-2FCDC247EF69"
 
 var boundaryStringRegExp = regexp.MustCompile("^.+boundary=(.+)$")
+
+func loadAssetsList(w http.ResponseWriter, r *http.Request) {
+	log.Printf("attempt to load assets list for user '%v'\n", uuid_test)
+	list, err := services.Instance().AssetsService.GetAssetList(uuid_test)
+	if err != nil {
+		switch {
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	result, err := json.Marshal(list)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(result)
+	w.WriteHeader(http.StatusOK)
+}
 
 func loadAsset(w http.ResponseWriter, r *http.Request) {
 	assetName := getField(r, 0)
@@ -39,15 +71,6 @@ func loadAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	// correct status code will be returned by http.ServeContent
 }
-
-// TODO: check error cases, add appopriate tests
-// 1. user not found
-// 2. token is expired
-// 3. too large file
-// 4. file is not belonds to the user
-// 5. user exceed the limits (3 types of limit: max 100 files, for each file 4GB, for total space 15GB)
-// 6. delete user with files
-// 7. delete file without user
 
 func storeAsset(w http.ResponseWriter, r *http.Request) {
 	assetName := getField(r, 0)

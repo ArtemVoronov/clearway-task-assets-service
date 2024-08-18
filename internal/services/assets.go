@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	createAssetQuery = `INSERT INTO assets (name, user_uuid, file_id) VALUES ($1, $2, $3)`
-	getAssetQuery    = `SELECT file_id FROM assets WHERE name = $1`
+	createAssetQuery   = `INSERT INTO assets (name, user_uuid, file_id) VALUES ($1, $2, $3)`
+	getAssetQuery      = `SELECT file_id FROM assets WHERE name = $1`
+	getAssetsListQuery = `SELECT name FROM assets WHERE user_uuid = $1`
 )
 
 var ErrDuplicateAsset = errors.New("duplicate asset")
@@ -125,4 +126,45 @@ func (s *AssetsService) GetAsset(name string, userUuid string, startStreaming St
 	}
 
 	return nil
+}
+
+func (s *AssetsService) GetAssetList(userUuid string) ([]string, error) {
+	list, err := s.client(userUuid).Tx(
+		func(tx pgx.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+			assetsList := []string{}
+			rows, internalErr := tx.Query(ctx, getAssetsListQuery, userUuid)
+			if internalErr != nil {
+				return nil, internalErr
+			}
+
+			for rows.Next() {
+				var assetName string
+				internalErr := rows.Scan(&assetName)
+				if internalErr != nil {
+					return nil, fmt.Errorf("unable to scan assets list: %w", internalErr)
+				}
+				assetsList = append(assetsList, assetName)
+			}
+
+			internalErr = rows.Err()
+			if internalErr != nil {
+				return nil, fmt.Errorf("unable to scan assets list: %w", internalErr)
+			}
+
+			return assetsList, nil
+		},
+		pgx.TxOptions{
+			IsoLevel: pgx.ReadCommitted,
+		})()
+
+	if err != nil {
+		return nil, fmt.Errorf("unable to get assets list: %w", err)
+	}
+
+	result, ok := list.([]string)
+	if !ok {
+		return nil, fmt.Errorf("unable to convert result into []string")
+	}
+
+	return result, nil
 }
