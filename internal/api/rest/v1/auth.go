@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 
@@ -12,6 +13,8 @@ import (
 )
 
 var regExpIpAddr = regexp.MustCompile("^(.+):.+$")
+
+const maxAttempts = 10
 
 func authenicate(w http.ResponseWriter, r *http.Request) {
 	b, err := io.ReadAll(r.Body)
@@ -34,22 +37,46 @@ func authenicate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := services.Instance().AuthService.CreateToken(user.Login, user.Password, ipAddr)
+	token, err := createOrUpdateToken(user.Login, user.Password, ipAddr)
 	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrInvalidPasswod):
-			http.Error(w, "Invalid credentials", http.StatusBadRequest)
-		case errors.Is(err, services.ErrUserNotFound):
-			http.Error(w, "User not found", http.StatusBadRequest)
-		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		processAuthError(err, w)
 		return
 	}
 
+	log.Printf("user '%v' authenicated\n", user.Login)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(fmt.Sprintf("{\"token\":\"%v\"}", token)))
 	w.WriteHeader(http.StatusOK)
+}
+
+func createOrUpdateToken(login, password, ipAddr string) (string, error) {
+	token, err := services.Instance().AuthService.CreateOrUpdateToken(login, password, ipAddr)
+	// if duplicate error occurrs then try to repeat the tx
+	if err != nil && errors.Is(err, services.ErrDuplicateAccessToken) {
+		for attempt := 1; attempt <= maxAttempts; attempt++ {
+			token, err = services.Instance().AuthService.CreateOrUpdateToken(login, password, ipAddr)
+			if err != nil && errors.Is(err, services.ErrDuplicateAccessToken) {
+				continue
+			}
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+	return token, err
+}
+
+func processAuthError(err error, w http.ResponseWriter) {
+	switch {
+	case errors.Is(err, services.ErrDuplicateAccessToken):
+		http.Error(w, "Duplicate access token generation", http.StatusInternalServerError)
+	case errors.Is(err, services.ErrInvalidPassword):
+		http.Error(w, "Invalid credentials", http.StatusBadRequest)
+	case errors.Is(err, services.ErrUserNotFound):
+		http.Error(w, "User not found", http.StatusBadRequest)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func parseIpAddr(remoteAddr string) (string, error) {
