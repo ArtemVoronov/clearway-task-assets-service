@@ -5,7 +5,6 @@ import (
 	"hash/fnv"
 )
 
-// TODO: make it configurable
 const BUCKET_NUMBER = 65536
 const DEFAULT_BUCKET_FACTOR = 2
 

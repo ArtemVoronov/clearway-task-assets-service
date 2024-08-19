@@ -40,7 +40,6 @@ func initAppServices() {
 
 func initRestApiRoutes() *http.ServeMux {
 	routes := http.NewServeMux()
-	// TODO: add tech endpoints
 	routes.HandleFunc("/", v1.HandleRoute)
 	return routes
 }

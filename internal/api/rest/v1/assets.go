@@ -15,17 +15,6 @@ import (
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
 
-// TODO: check error cases, add appopriate tests
-// 1. user not found
-// 2. token is expired
-// 3. too large file
-// 4. file is not belonds to the user
-// 5. user exceed the limits (3 types of limit: max 100 files, for each file 4GB, for total space 15GB)
-// 6. delete user with files
-// 7. delete file without user
-
-// TODO: try to put authorization header reading into closure
-
 var regExpBoundaryString = regexp.MustCompile("^.+boundary=(.+)$")
 
 func loadAssetsList(w http.ResponseWriter, r *http.Request) {

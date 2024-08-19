@@ -93,7 +93,6 @@ func initPostgreServiceBySuffix(databaseSuffix string) (*PostgreSQLService, erro
 		return nil, fmt.Errorf("missed 'DATABASE_NAME_PREFIX' parameter")
 	}
 
-	// TODO: add parameters for pool configuration
 	pgPoolParams := "?pool_max_conns=100"
 
 	pgDatabase := fmt.Sprintf("%v_%v", pgDatabasePrefix, databaseSuffix)

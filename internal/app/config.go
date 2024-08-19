@@ -23,7 +23,6 @@ const (
 	// A large object cannot exceed 4TB for PostgreSQL 9.3 or newer or 2GB for older versions.
 	// Body max size should be configurable for different environments with appropriate system resources.
 	// Body could contain multiple files which in sum should not exceed above limits.
-	// TODO: add configuration of body max size
 	DefaultBodyMaxSize = 1024 * 1024 * 1024 * 10 // 10 GB
 )
 
