@@ -33,42 +33,7 @@
                 <constraints nullable="false" />
             </column>
         </createTable>
-        <createTable tableName="access_tokens">
-            <column name="token" type="varchar(32)">
-                <constraints nullable="false" primaryKey="true" />
-            </column>
-            <column name="user_uuid" type="uuid">
-                <constraints nullable="false"/>
-            </column>
-            <column name="ip_addr" type="varchar(45)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="create_date" type="timestamp" defaultValue="NOW()">
-                <constraints nullable="false" />
-            </column>
-        </createTable>
-        <createTable tableName="assets">
-            <column name="name" type="varchar(256)">
-                <constraints nullable="false" />
-            </column>
-            <column name="user_uuid" type="uuid">
-                <constraints nullable="false"/>
-            </column>
-            <column name="file_id" type="oid">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="create_date" type="timestamp" defaultValue="NOW()">
-                <constraints nullable="false" />
-            </column>
-        </createTable>
-        <addPrimaryKey columnNames="name, user_uuid" constraintName="pk_assets" tableName="assets"/>
-        <sql dbms="postgresql">
-            CREATE INDEX assets_b_tree_index_by_user_uuid ON assets (user_uuid);
-            CREATE INDEX access_tokens_b_tree_index_by_user_uuid ON access_tokens (user_uuid);
-        </sql>
         <rollback>
-            <dropTable tableName="assets"/>
-            <dropTable tableName="access_tokens"/>
             <dropTable tableName="users"/>
         </rollback>
     </changeSet>

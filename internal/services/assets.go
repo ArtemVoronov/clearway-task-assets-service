@@ -21,27 +21,38 @@ var ErrDuplicateAsset = errors.New("duplicate asset")
 var ErrNotFoundAsset = errors.New("asset not found")
 
 type AssetsService struct {
-	clientShards []*PostgreSQLService
-	ShardsNum    int
-	shardService *ShardService
+	shardedClients []*PostgreSQLService
+	ShardsNum      int
+	shardService   *ShardService
 }
 
 func CreateAssetsService(clients []*PostgreSQLService) *AssetsService {
 	return &AssetsService{
-		clientShards: clients,
-		ShardsNum:    len(clients),
-		shardService: CreateShardService(len(clients)),
+		shardedClients: clients,
+		ShardsNum:      len(clients),
+		shardService:   CreateShardService(len(clients)),
 	}
 }
 
 func (s *AssetsService) Shutdown() error {
+	result := []error{}
+	l := len(s.shardedClients)
+	for i := 0; i < l; i++ {
+		err := s.shardedClients[i].Shutdown()
+		if err != nil {
+			result = append(result, err)
+		}
+	}
+	if len(result) > 0 {
+		errors.Join(result...)
+	}
 	return nil
 }
 
 func (s *AssetsService) client(userUuid string) *PostgreSQLService {
 	bucketIndex := s.shardService.GetBucketIndex(userUuid)
 	bucket := s.shardService.GetBucketByIndex(bucketIndex)
-	return s.clientShards[bucket]
+	return s.shardedClients[bucket]
 }
 
 func (s *AssetsService) CreateAsset(name string, userUuid string, file io.Reader) error {

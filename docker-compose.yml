@@ -6,15 +6,15 @@ services:
     environment:
       POSTGRES_USER: "${DATABASE_USER}"
       POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
-      POSTGRES_MULTIPLE_DATABASES: "${DATABASE_NAME_PREFIX}_1,${DATABASE_NAME_PREFIX}_2"
+      POSTGRES_MULTIPLE_DATABASES: "${DATABASE_NAME_PREFIX}_1,${DATABASE_NAME_PREFIX}_2,${DATABASE_NAME_PREFIX}_auth,${DATABASE_NAME_PREFIX}_users"
     volumes:
       - ./scripts/docker-postgresql-multiple-databases:/docker-entrypoint-initdb.d
       - database-volume:/var/lib/postgresql/data
 
-  liquibase_shard_1:
+  liquibase_assets_shard_1:
     image: liquibase/liquibase
     volumes:
-      - ./docker/liquibase/migrations:/liquibase/changelog
+      - ./docker/liquibase/migrations/sharded/assets:/liquibase/changelog
     command:
      - /bin/sh
      - -c
@@ -31,10 +31,10 @@ services:
       timeout: 10s
       retries: 3
 
-  liquibase_shard_2:
+  liquibase_assets_shard_2:
     image: liquibase/liquibase
     volumes:
-      - ./docker/liquibase/migrations:/liquibase/changelog
+      - ./docker/liquibase/migrations/sharded/assets:/liquibase/changelog
     command:
      - /bin/sh
      - -c
@@ -51,14 +51,56 @@ services:
       timeout: 10s
       retries: 3
 
+  liquibase_auth:
+    image: liquibase/liquibase
+    volumes:
+      - ./docker/liquibase/migrations/unsharded/auth:/liquibase/changelog
+    command:
+     - /bin/sh
+     - -c
+     - |
+        echo "sleep 5s"
+        sleep 5
+        liquibase --username=${DATABASE_USER} --password=${DATABASE_PASSWORD} --changeLogFile=changelog/db.changelog-root.xml --url=${DATABASE_URL}_auth update
+    depends_on:
+      - postgres
+    restart: on-failure
+    healthcheck:
+      test: curl -sS http://127.0.0.1 || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 3
+
+  liquibase_users:
+    image: liquibase/liquibase
+    volumes:
+      - ./docker/liquibase/migrations/unsharded/users:/liquibase/changelog
+    command:
+     - /bin/sh
+     - -c
+     - |
+        echo "sleep 5s"
+        sleep 5
+        liquibase --username=${DATABASE_USER} --password=${DATABASE_PASSWORD} --changeLogFile=changelog/db.changelog-root.xml --url=${DATABASE_URL}_users update
+    depends_on:
+      - postgres
+    restart: on-failure
+    healthcheck:
+      test: curl -sS http://127.0.0.1 || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 3
+
   api:
     build: .
     container_name: assets-service-api
     ports:
       - "3005:3005"
     depends_on:
-      - liquibase_shard_1
-      - liquibase_shard_2
+      - liquibase_assets_shard_1
+      - liquibase_assets_shard_2
+      - liquibase_auth
+      - liquibase_users
       - postgres
     restart: always
     healthcheck:
