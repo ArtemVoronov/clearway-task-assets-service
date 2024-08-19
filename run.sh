@@ -5,7 +5,7 @@ down() {
 }  
 
 purge() {
-    docker volume rm clearway-task-assets-service-database-volume
+    docker volume rm clearway-task-assets-service_database-volume
     docker rmi clearway-task-assets-service-api:latest
 }  
 
