@@ -1,9 +1,11 @@
 package services
 
 import (
-	"hash/maphash"
+	"hash"
+	"hash/fnv"
 )
 
+// TODO: make it confugrable
 const BUCKET_NUMBER = 65536
 const DEFAULT_BUCKET_FACTOR = 2
 
@@ -15,7 +17,7 @@ type Interval struct {
 type ShardService struct {
 	buckets    []Interval
 	bucketsNum int
-	hasher     *maphash.Hash
+	hasher     hash.Hash64
 }
 
 func CreateShardService(bucketFactor int) *ShardService {
@@ -23,7 +25,7 @@ func CreateShardService(bucketFactor int) *ShardService {
 	return &ShardService{
 		buckets:    buckets,
 		bucketsNum: len(buckets),
-		hasher:     &maphash.Hash{},
+		hasher:     fnv.New64(),
 	}
 }
 
@@ -32,11 +34,16 @@ func (s *ShardService) Shutdown() error {
 }
 
 func (s *ShardService) GetBucketIndex(key string) uint64 {
-	s.hasher.WriteString(key)
-	hash := s.hasher.Sum64()
+	hash := s.hash(key)
 	bucketIndex := hash % BUCKET_NUMBER
-	s.hasher.Reset()
 	return bucketIndex
+}
+
+func (s *ShardService) hash(key string) uint64 {
+	s.hasher.Write([]byte(key))
+	hash := s.hasher.Sum64()
+	s.hasher.Reset()
+	return hash
 }
 
 func (s *ShardService) GetBucketByIndex(bucketIndex uint64) int {
