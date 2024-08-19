@@ -5,8 +5,8 @@ down() {
 }  
 
 purge() {
-    docker volume rm clearway-task-assets-service_database-volume
-    docker rmi clearway-task-assets-service_api:latest
+    docker volume rm clearway-task-assets-service-database-volume
+    docker rmi clearway-task-assets-service-api:latest
 }  
 
 build() {
@@ -32,12 +32,17 @@ generateSelfSignedCerts() {
 }
 
 db1() {
-    docker exec -it assets-service-database psql -d assets_service_db_1 -U assets_service_user
+    docker exec -it assets-service-database psql -d assets_service_db_assets_shard_1 -U assets_service_user
 }
 
 db2() {
-    docker exec -it assets-service-database psql -d assets_service_db_2 -U assets_service_user
+    docker exec -it assets-service-database psql -d assets_service_db_assets_shard_2 -U assets_service_user
 }
+
+dbunsharded() {
+    docker exec -it assets-service-database psql -d assets_service_db_unsharded -U assets_service_user
+}
+
 case "$1" in
   start)
     down
@@ -65,6 +70,9 @@ case "$1" in
   db2)
     db2
     ;;
+  dbunsharded)
+    dbunsharded
+    ;;
   *)
-    echo "Usage: $0 {start|stop|tail|purge|certs|db1|db2}"
+    echo "Usage: $0 {start|stop|tail|purge|certs|db1|db2|dbunsharded}"
 esac

@@ -27,7 +27,7 @@ import (
 // TODO: clean and get it from token
 const uuid_test = "1F615C1D-6BAE-4D8F-EF0B-2FCDC247EF69"
 
-var boundaryStringRegExp = regexp.MustCompile("^.+boundary=(.+)$")
+var regExpBoundaryString = regexp.MustCompile("^.+boundary=(.+)$")
 
 func loadAssetsList(w http.ResponseWriter, r *http.Request) {
 	log.Printf("attempt to load assets list for user '%v'\n", uuid_test)
@@ -166,7 +166,7 @@ func processStoreAsserError(err error, w http.ResponseWriter) {
 }
 
 func parseBoundaryString(contentTypeString string) (string, error) {
-	matches := boundaryStringRegExp.FindStringSubmatch(contentTypeString)
+	matches := regExpBoundaryString.FindStringSubmatch(contentTypeString)
 
 	actualMathchesCount := len(matches)
 	if actualMathchesCount != 2 {

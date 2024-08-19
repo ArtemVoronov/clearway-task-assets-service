@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 )
 
 type Services struct {
-	AuthService   *AuthService
-	UsersService  *UsersService
-	AssetsService *AssetsService
+	AuthService    *AuthService
+	UsersService   *UsersService
+	AssetsService  *AssetsService
+	pgForAssets    []*PostgreSQLService
+	pgForUnsharded *PostgreSQLService
 }
 
 var once sync.Once
@@ -37,28 +38,26 @@ func createServices() (*Services, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to init postgresql services for assets: %w", err)
 	}
-	pgForAuth, err := initPostgreServiceBySuffix("auth")
+	pgForUnsharded, err := initPostgreServiceBySuffix("unsharded")
 	if err != nil {
 		return nil, fmt.Errorf("unable to init postgresql services for auth: %w", err)
 	}
-	pgForUsers, err := initPostgreServiceBySuffix("users")
-	if err != nil {
-		return nil, fmt.Errorf("unable to init postgresql services for users: %w", err)
-	}
 
 	return &Services{
-		AuthService:   CreateAuthService(pgForAuth),
-		UsersService:  CreateUsersService(pgForUsers),
-		AssetsService: CreateAssetsService(pgForAssets),
+		AuthService:    CreateAuthService(pgForUnsharded),
+		UsersService:   CreateUsersService(pgForUnsharded),
+		AssetsService:  CreateAssetsService(pgForAssets),
+		pgForAssets:    pgForAssets,
+		pgForUnsharded: pgForUnsharded,
 	}, nil
 }
 
 func initPostgreServicesForAssets() ([]*PostgreSQLService, error) {
 	pgServices := make([]*PostgreSQLService, 0, DEFAULT_BUCKET_FACTOR)
 	for i := 1; i <= DEFAULT_BUCKET_FACTOR; i++ {
-		pgService, err := initPostgreServiceBySuffix(strconv.Itoa(i))
+		pgService, err := initPostgreServiceBySuffix(fmt.Sprintf("assets_shard_%v", i))
 		if err != nil {
-			return nil, fmt.Errorf("unable to create postgresql service for assets shard '%v': %w", i, err)
+			return nil, fmt.Errorf("unable to create postgresql service for assets: %w", err)
 		}
 		pgServices = append(pgServices, pgService)
 	}
@@ -101,7 +100,18 @@ func initPostgreServiceBySuffix(databaseSuffix string) (*PostgreSQLService, erro
 
 func (s *Services) Shutdown() error {
 	result := []error{}
-	err := s.AuthService.Shutdown()
+	l := len(s.pgForAssets)
+	for i := 0; i < l; i++ {
+		err := s.pgForAssets[i].Shutdown()
+		if err != nil {
+			result = append(result, err)
+		}
+	}
+	err := s.pgForUnsharded.Shutdown()
+	if err != nil {
+		result = append(result, err)
+	}
+	err = s.AuthService.Shutdown()
 	if err != nil {
 		result = append(result, err)
 	}

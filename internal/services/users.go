@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app/utils"
 	"github.com/jackc/pgx/v5"
@@ -11,14 +12,22 @@ import (
 )
 
 const (
-	createUserQuery          = `INSERT INTO users (uuid, login, password_hash) VALUES ($1, $2, $3)`
-	findUserUUIDByLoginQuery = `SELECT uuid FROM users WHERE login = $1`
+	createUserQuery     = `INSERT INTO users (uuid, login, password_hash) VALUES ($1, $2, $3)`
+	getUserUUIDQuery    = `SELECT uuid FROM users WHERE login = $1`
+	getUserByLoginQuery = `SELECT uuid, login, password_hash FROM users WHERE login = $1`
 )
 
 var ErrDuplicateUser = errors.New("duplicate user")
+var ErrUserNotFound = errors.New("user not found")
 
 type UsersService struct {
 	client *PostgreSQLService
+}
+
+type User struct {
+	UUID         string
+	Login        string
+	PasswordHash string
 }
 
 func CreateUsersService(client *PostgreSQLService) *UsersService {
@@ -28,7 +37,7 @@ func CreateUsersService(client *PostgreSQLService) *UsersService {
 }
 
 func (s *UsersService) Shutdown() error {
-	return s.client.Shutdown()
+	return nil
 }
 
 func (s *UsersService) CreateUser(login string, password string) error {
@@ -75,7 +84,7 @@ func (s *UsersService) CheckUserExistence(login string) (bool, error) {
 	result, err := s.client.Tx(
 		func(tx pgx.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
 			var uuid string
-			internalErr := tx.QueryRow(ctx, "SELECT uuid from users where login = $1", login).Scan(&uuid)
+			internalErr := tx.QueryRow(ctx, getUserUUIDQuery, login).Scan(&uuid)
 			if internalErr != nil && !errors.Is(internalErr, pgx.ErrNoRows) {
 				return "", fmt.Errorf("unable to check user existence with login '%v': %w", login, internalErr)
 			}
@@ -95,7 +104,35 @@ func (s *UsersService) CheckUserExistence(login string) (bool, error) {
 		return false, fmt.Errorf("unable to convert result into string")
 	}
 
-	fmt.Printf("CheckUserExistence: %v\n", userUuid)
+	log.Printf("CheckUserExistence: %v\n", userUuid)
 
 	return true, nil
+}
+
+func (s *UsersService) GetUser(login string) (User, error) {
+	var user User
+	result, err := s.client.Tx(
+		func(tx pgx.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+			var u User
+			internalErr := tx.QueryRow(ctx, getUserByLoginQuery, login).Scan(&u.UUID, &u.Login, &u.PasswordHash)
+			if internalErr != nil && !errors.Is(internalErr, pgx.ErrNoRows) {
+				return "", fmt.Errorf("unable to get user with login '%v': %w", login, internalErr)
+			}
+			return user, internalErr
+		},
+		pgx.TxOptions{
+			IsoLevel: pgx.ReadCommitted,
+		})()
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return user, ErrUserNotFound
+		}
+		return user, err
+	}
+	user, ok := result.(User)
+	if !ok {
+		return user, fmt.Errorf("unable to convert result into User")
+	}
+
+	return user, nil
 }

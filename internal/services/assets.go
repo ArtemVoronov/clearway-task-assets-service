@@ -35,17 +35,6 @@ func CreateAssetsService(clients []*PostgreSQLService) *AssetsService {
 }
 
 func (s *AssetsService) Shutdown() error {
-	result := []error{}
-	l := len(s.shardedClients)
-	for i := 0; i < l; i++ {
-		err := s.shardedClients[i].Shutdown()
-		if err != nil {
-			result = append(result, err)
-		}
-	}
-	if len(result) > 0 {
-		errors.Join(result...)
-	}
 	return nil
 }
 

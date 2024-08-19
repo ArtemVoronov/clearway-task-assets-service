@@ -14,6 +14,13 @@ func MD5Hash(text string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+func GenerateToken() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	hash := md5.Sum(b)
+	return hex.EncodeToString(hash[:])
+}
+
 // just because we can't use external lib (like "github.com/google/uuid")
 func PseudoUUID() (string, error) {
 	b := make([]byte, 16)

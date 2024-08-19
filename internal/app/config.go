@@ -26,7 +26,7 @@ const (
 	DefaultBodyMaxSize = 1024 * 1024 * 1024 * 10 // 10 GB
 )
 
-var configRowRegExp = regexp.MustCompile(`(.+)=(.+)`)
+var regExpConfigRow = regexp.MustCompile(`(.+)=(.+)`)
 
 func SetUpEnvVarsFromConfig() error {
 	configFilePath, ok := os.LookupEnv("CONFIG_FILE_PATH")
@@ -42,7 +42,7 @@ func SetUpEnvVarsFromConfig() error {
 	input := string(data)
 	rows := strings.Split(input, "\n")
 	for _, row := range rows {
-		submatches := configRowRegExp.FindStringSubmatch(row)
+		submatches := regExpConfigRow.FindStringSubmatch(row)
 		if len(submatches) == 3 {
 			paramName := strings.Trim(submatches[1], " ")
 			paramValue := strings.Trim(submatches[2], " ")
