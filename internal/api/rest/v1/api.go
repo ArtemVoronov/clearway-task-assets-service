@@ -54,7 +54,7 @@ func isBodyLimitExceeded(r *http.Request) (bool, error) {
 
 	bodyLength, err := strconv.Atoi(contentLength)
 	if err != nil {
-		return false, fmt.Errorf("unable to parse Content-Length header: %w", err)
+		return false, fmt.Errorf("unable to parse 'Content-Length' header: %w", err)
 	}
 
 	return bodyLength > app.DefaultBodyMaxSize, nil

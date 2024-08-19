@@ -82,10 +82,6 @@ func storeAsset(w http.ResponseWriter, r *http.Request) {
 			processStoreAsserError(err, w)
 			return
 		}
-	} else if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
-		log.Println("special case of mime type: application/x-www-form-urlencoded")
-		log.Printf("attempt to store urlencoded assets '%v'\n", assetName) // log each parameter
-		// TODO: parse body and store each asset separately
 	} else {
 		log.Println("default case for others mime types")
 		log.Printf("attempt to store asset '%v'\n", assetName)
@@ -121,7 +117,7 @@ func storeMultipartedAssets(contentType string, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		miltipartedAssetName := p.FormName()
+		miltipartedAssetName := parseMultipartAssetName(p)
 		log.Printf("attempt to store mutliparted asset '%v'\n", miltipartedAssetName)
 		err = storeOneAsset(miltipartedAssetName, p)
 		if err != nil {
@@ -129,6 +125,15 @@ func storeMultipartedAssets(contentType string, r *http.Request) error {
 		}
 	}
 	return nil
+}
+
+func parseMultipartAssetName(p *multipart.Part) string {
+	fileName := p.FileName()
+	if len(fileName) > 0 {
+		return fileName
+	} else {
+		return p.FormName()
+	}
 }
 
 func processStoreAsserError(err error, w http.ResponseWriter) {

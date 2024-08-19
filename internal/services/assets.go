@@ -80,9 +80,12 @@ func (s *AssetsService) CreateAsset(name string, userUuid string, file io.Reader
 				return internalErr
 			}
 
-			_, internalErr = io.Copy(obj, file)
+			written, internalErr := io.Copy(obj, file)
 			if internalErr != nil {
 				return internalErr
+			}
+			if written == 0 {
+				fmt.Printf("Warning! Stored empty file '%v'\n", name)
 			}
 			return internalErr
 		},
