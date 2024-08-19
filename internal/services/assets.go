@@ -12,8 +12,9 @@ import (
 
 const (
 	createAssetQuery   = `INSERT INTO assets (name, user_uuid, file_id) VALUES ($1, $2, $3)`
-	getAssetQuery      = `SELECT file_id FROM assets WHERE name = $1`
+	getAssetQuery      = `SELECT file_id FROM assets WHERE user_uuid = $1 and name = $2`
 	getAssetsListQuery = `SELECT name FROM assets WHERE user_uuid = $1`
+	deleteAssetQuery   = `DELETE FROM assets WHERE user_uuid = $1 and name = $2`
 )
 
 var ErrDuplicateAsset = errors.New("duplicate asset")
@@ -38,12 +39,6 @@ func (s *AssetsService) Shutdown() error {
 }
 
 func (s *AssetsService) client(userUuid string) *PostgreSQLService {
-	bucketIndex := s.shardService.GetBucketIndex(userUuid)
-	bucket := s.shardService.GetBucketByIndex(bucketIndex)
-	return s.clientShards[bucket]
-}
-
-func (s *AssetsService) Client(userUuid string) *PostgreSQLService {
 	bucketIndex := s.shardService.GetBucketIndex(userUuid)
 	bucket := s.shardService.GetBucketByIndex(bucketIndex)
 	return s.clientShards[bucket]
@@ -102,7 +97,7 @@ func (s *AssetsService) GetAsset(name string, userUuid string, startStreaming St
 	err := s.client(userUuid).TxVoid(
 		func(tx pgx.Tx, ctx context.Context, cancel context.CancelFunc) error {
 			var oid uint32
-			internalErr := tx.QueryRow(ctx, getAssetQuery, name).Scan(&oid)
+			internalErr := tx.QueryRow(ctx, getAssetQuery, userUuid, name).Scan(&oid)
 			if internalErr != nil {
 				return internalErr
 			}
@@ -170,4 +165,40 @@ func (s *AssetsService) GetAssetList(userUuid string) ([]string, error) {
 	}
 
 	return result, nil
+}
+
+func (s *AssetsService) DeleteAsset(name string, userUuid string) error {
+	err := s.client(userUuid).TxVoid(
+		func(tx pgx.Tx, ctx context.Context, cancel context.CancelFunc) error {
+			var oid uint32
+			internalErr := tx.QueryRow(ctx, getAssetQuery, userUuid, name).Scan(&oid)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			lobs := tx.LargeObjects()
+			internalErr = lobs.Unlink(ctx, oid)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			_, internalErr = tx.Exec(ctx, deleteAssetQuery, userUuid, name)
+			if internalErr != nil {
+				return internalErr
+			}
+
+			return nil
+		},
+		pgx.TxOptions{
+			IsoLevel: pgx.ReadCommitted,
+		})()
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return fmt.Errorf("asset '%v' error: %w", name, ErrNotFoundAsset)
+		}
+		return fmt.Errorf("user '%v' unable to delete assert with name '%v': %w", userUuid, name, err)
+	}
+
+	return nil
 }

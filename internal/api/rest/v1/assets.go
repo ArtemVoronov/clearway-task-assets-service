@@ -72,6 +72,26 @@ func loadAsset(w http.ResponseWriter, r *http.Request) {
 	// correct status code will be returned by http.ServeContent
 }
 
+func deleteAsset(w http.ResponseWriter, r *http.Request) {
+	assetName := getField(r, 0)
+	log.Printf("attempt to delete asset '%v'\n", assetName)
+
+	err := services.Instance().AssetsService.DeleteAsset(assetName, uuid_test)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrNotFoundAsset):
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+	w.WriteHeader(http.StatusCreated)
+}
+
 func storeAsset(w http.ResponseWriter, r *http.Request) {
 	assetName := getField(r, 0)
 	contentType := r.Header.Get("Content-Type")

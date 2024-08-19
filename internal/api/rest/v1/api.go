@@ -23,15 +23,24 @@ func HandleRoute(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, app.DefaultBodyMaxSize)
 
-	var h http.Handler
+	var h http.HandlerFunc
 	var assetName string
 	p := r.URL.Path
 	switch {
-	case matchAndAssignVars(p, "/api/assetList"):
+	case matchAndAssignVars(p, "/api/assets"):
 		h = allowMethod(loadAssetsList, "GET")
 	case matchAndAssignVars(p, "/api/asset/([^/]+)", &assetName):
 		r = withPathParams(r, []string{assetName})
-		h = allowMethod(loadAsset, "GET")
+		switch r.Method {
+		case "GET":
+			h = func(w http.ResponseWriter, r *http.Request) { loadAsset(w, r) }
+		case "DELETE":
+			h = func(w http.ResponseWriter, r *http.Request) { deleteAsset(w, r) }
+		default:
+			w.Header().Set("Allow", "[GET, DELETE]")
+			http.Error(w, "405 method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 	case matchAndAssignVars(p, "/api/upload-asset/([^/]+)", &assetName):
 		r = withPathParams(r, []string{assetName})
 		h = allowMethod(storeAsset, "POST")
