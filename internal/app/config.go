@@ -17,6 +17,7 @@ const (
 	DefaultHttpServerGracefulShutdownTimeout = "2m"
 	DefaultAppRestApiPort                    = "3005"
 	DefaultDatabaseQueryTimeout              = "30s"
+	DefaultAccessTokenTTL                    = "24h"
 
 	// Current implementation of assets storing is based on large objects (see for details https://www.postgresql.org/docs/current/largeobjects.html).
 	// A large object cannot exceed 4TB for PostgreSQL 9.3 or newer or 2GB for older versions.

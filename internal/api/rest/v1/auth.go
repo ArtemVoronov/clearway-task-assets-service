@@ -8,11 +8,14 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
 
+var ErrAccessTokenExpired = errors.New("access token is expired")
 var regExpIpAddr = regexp.MustCompile("^(.+):.+$")
+var regExpAuthHeaderBearerToken = regexp.MustCompile("^Bearer (.+)$")
 
 const maxAttempts = 10
 
@@ -81,6 +84,25 @@ func processAuthError(err error, w http.ResponseWriter) {
 
 func parseIpAddr(remoteAddr string) (string, error) {
 	matches := regExpIpAddr.FindStringSubmatch(remoteAddr)
+
+	actualMathchesCount := len(matches)
+	if actualMathchesCount != 2 {
+		return "", fmt.Errorf("wrong len of matches")
+	}
+	result := matches[1]
+	return result, nil
+}
+
+func parseAuthorizationHeader(authorizationHeader string) (string, error) {
+	if len(authorizationHeader) <= 0 {
+		return "", fmt.Errorf("missed 'Authorization' header")
+	}
+
+	if !strings.HasPrefix(authorizationHeader, "Bearer") {
+		return "", fmt.Errorf("supported only 'Authorization' header with Bearer token")
+	}
+
+	matches := regExpAuthHeaderBearerToken.FindStringSubmatch(authorizationHeader)
 
 	actualMathchesCount := len(matches)
 	if actualMathchesCount != 2 {

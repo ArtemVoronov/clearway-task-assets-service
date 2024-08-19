@@ -24,14 +24,18 @@ import (
 // 6. delete user with files
 // 7. delete file without user
 
-// TODO: clean and get it from token
-const uuid_test = "1F615C1D-6BAE-4D8F-EF0B-2FCDC247EF69"
+// TODO: try to put authorization header reading into closure
 
 var regExpBoundaryString = regexp.MustCompile("^.+boundary=(.+)$")
 
 func loadAssetsList(w http.ResponseWriter, r *http.Request) {
-	log.Printf("attempt to load assets list for user '%v'\n", uuid_test)
-	list, err := services.Instance().AssetsService.GetAssetList(uuid_test)
+	token, err := CheckAuthorization(r)
+	if err != nil {
+		ProcessCheckAuthroizationError(w, err)
+		return
+	}
+	log.Printf("attempt to load assets list for user '%v'\n", token.UserUUID)
+	list, err := services.Instance().AssetsService.GetAssetList(token.UserUUID)
 	if err != nil {
 		switch {
 		default:
@@ -52,13 +56,18 @@ func loadAssetsList(w http.ResponseWriter, r *http.Request) {
 }
 
 func loadAsset(w http.ResponseWriter, r *http.Request) {
+	token, err := CheckAuthorization(r)
+	if err != nil {
+		ProcessCheckAuthroizationError(w, err)
+		return
+	}
 	assetName := getField(r, 0)
 	log.Printf("attempt to load asset '%v'\n", assetName)
 
 	var startStreaming services.StartStreamingFunc = func(content io.ReadSeeker) {
 		http.ServeContent(w, r, assetName, time.Now(), content)
 	}
-	err := services.Instance().AssetsService.GetAsset(assetName, uuid_test, startStreaming)
+	err = services.Instance().AssetsService.GetAsset(assetName, token.UserUUID, startStreaming)
 
 	if err != nil {
 		switch {
@@ -73,10 +82,15 @@ func loadAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteAsset(w http.ResponseWriter, r *http.Request) {
+	token, err := CheckAuthorization(r)
+	if err != nil {
+		ProcessCheckAuthroizationError(w, err)
+		return
+	}
 	assetName := getField(r, 0)
 	log.Printf("attempt to delete asset '%v'\n", assetName)
 
-	err := services.Instance().AssetsService.DeleteAsset(assetName, uuid_test)
+	err = services.Instance().AssetsService.DeleteAsset(assetName, token.UserUUID)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrNotFoundAsset):
@@ -93,11 +107,16 @@ func deleteAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 func storeAsset(w http.ResponseWriter, r *http.Request) {
+	token, err := CheckAuthorization(r)
+	if err != nil {
+		ProcessCheckAuthroizationError(w, err)
+		return
+	}
 	assetName := getField(r, 0)
 	contentType := r.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "multipart/form-data") {
 		log.Println("special case of mime type: multipart/form-data")
-		err := storeMultipartedAssets(contentType, r)
+		err := storeMultipartedAssets(contentType, r, token)
 		if err != nil {
 			processStoreAsserError(err, w)
 			return
@@ -105,7 +124,7 @@ func storeAsset(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Println("default case for others mime types")
 		log.Printf("attempt to store asset '%v'\n", assetName)
-		err := storeOneAsset(assetName, r.Body)
+		err := storeOneAsset(assetName, r.Body, token)
 		if err != nil {
 			processStoreAsserError(err, w)
 			return
@@ -117,12 +136,11 @@ func storeAsset(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func storeOneAsset(assetName string, reader io.Reader) error {
-	// TODO: get real uuid after finishing the debugging
-	return services.Instance().AssetsService.CreateAsset(assetName, uuid_test, reader)
+func storeOneAsset(assetName string, reader io.Reader, t *services.AccessToken) error {
+	return services.Instance().AssetsService.CreateAsset(assetName, t.UserUUID, reader)
 }
 
-func storeMultipartedAssets(contentType string, r *http.Request) error {
+func storeMultipartedAssets(contentType string, r *http.Request, t *services.AccessToken) error {
 	boundaryString, err := parseBoundaryString(contentType)
 	if err != nil {
 		return err
@@ -139,7 +157,7 @@ func storeMultipartedAssets(contentType string, r *http.Request) error {
 		}
 		miltipartedAssetName := parseMultipartAssetName(p)
 		log.Printf("attempt to store mutliparted asset '%v'\n", miltipartedAssetName)
-		err = storeOneAsset(miltipartedAssetName, p)
+		err = storeOneAsset(miltipartedAssetName, p, t)
 		if err != nil {
 			return err
 		}

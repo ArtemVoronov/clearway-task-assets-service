@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app/utils"
 	"github.com/jackc/pgx/v5"
@@ -14,19 +15,35 @@ const (
 	createTokenQuery        = `INSERT INTO access_tokens (access_token, user_uuid, ip_addr) VALUES ($1, $2, $3) RETURNING access_token`
 	updateTokenQuery        = `UPDATE access_tokens SET access_token=$1, ip_addr=$2, create_date=NOW() WHERE user_uuid=$3`
 	getTokenByUserUUIDQuery = `SELECT access_token FROM access_tokens WHERE user_uuid = $1`
+	getTokenQuery           = `SELECT access_token, user_uuid, ip_addr, create_date FROM access_tokens WHERE access_token = $1`
 )
 
 var ErrNotFoundAccessToken = errors.New("access token not found")
 var ErrInvalidPassword = errors.New("invalid password")
 var ErrDuplicateAccessToken = errors.New("duplciate access_token")
 
-type AuthService struct {
-	client *PostgreSQLService
+type AccessToken struct {
+	Value      string
+	UserUUID   string
+	IpAddress  string
+	CreateDate time.Time
 }
 
-func CreateAuthService(client *PostgreSQLService) *AuthService {
+func (t *AccessToken) IsExpired() bool {
+	now := time.Now()
+	expireTime := t.CreateDate.Add(instance.AuthService.AccessTokenTTL)
+	return now.After(expireTime)
+}
+
+type AuthService struct {
+	client         *PostgreSQLService
+	AccessTokenTTL time.Duration
+}
+
+func CreateAuthService(client *PostgreSQLService, accessTokenTTL time.Duration) *AuthService {
 	return &AuthService{
-		client: client,
+		client:         client,
+		AccessTokenTTL: accessTokenTTL,
 	}
 }
 
@@ -116,6 +133,30 @@ func (s *AuthService) CreateOrUpdateToken(login string, password string, ipAddr 
 	return token, err
 }
 
-func (s *AuthService) GetToken(token string, userUuid string, ipAddr string) error {
-	return fmt.Errorf("not implemented")
+func (s *AuthService) GetToken(token string) (AccessToken, error) {
+	var accessToken AccessToken
+	result, err := s.client.Tx(
+		func(tx pgx.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+			var t AccessToken
+			internalErr := tx.QueryRow(ctx, getTokenQuery, token).Scan(&t.Value, &t.UserUUID, &t.IpAddress, &t.CreateDate)
+			if internalErr != nil {
+				return t, internalErr
+			}
+
+			return t, nil
+		},
+		pgx.TxOptions{
+			IsoLevel: pgx.ReadCommitted,
+		})()
+
+	if err != nil {
+		return accessToken, err
+	}
+
+	accessToken, ok := result.(AccessToken)
+	if !ok {
+		return accessToken, fmt.Errorf("unable to convert result into AccessToken")
+	}
+
+	return accessToken, err
 }

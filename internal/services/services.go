@@ -7,6 +7,9 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app"
 )
 
 type Services struct {
@@ -42,9 +45,13 @@ func createServices() (*Services, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to init postgresql services for auth: %w", err)
 	}
+	accessTokenTTL, err := parseAccessTokenTTL()
+	if err != nil {
+		return nil, fmt.Errorf("unable to init access token TTL: %w", err)
+	}
 
 	return &Services{
-		AuthService:    CreateAuthService(pgForUnsharded),
+		AuthService:    CreateAuthService(pgForUnsharded, accessTokenTTL),
 		UsersService:   CreateUsersService(pgForUnsharded),
 		AssetsService:  CreateAssetsService(pgForAssets),
 		pgForAssets:    pgForAssets,
@@ -127,4 +134,12 @@ func (s *Services) Shutdown() error {
 		errors.Join(result...)
 	}
 	return nil
+}
+
+func parseAccessTokenTTL() (time.Duration, error) {
+	accessTokenTTLStr, ok := os.LookupEnv("AUTH_ACCESS_TOKEN_TTL")
+	if !ok {
+		accessTokenTTLStr = app.DefaultAccessTokenTTL
+	}
+	return time.ParseDuration(accessTokenTTLStr)
 }

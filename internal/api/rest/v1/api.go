@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -9,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app"
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
 
 func HandleRoute(w http.ResponseWriter, r *http.Request) {
@@ -118,5 +120,32 @@ func allowMethod(h http.HandlerFunc, method string) http.HandlerFunc {
 			return
 		}
 		h(w, r)
+	}
+}
+
+func CheckAuthorization(r *http.Request) (*services.AccessToken, error) {
+	authorizationHeader := r.Header.Get("Authorization")
+	t, err := parseAuthorizationHeader(authorizationHeader)
+	if err != nil {
+		return nil, err
+	}
+	result, err := services.Instance().AuthService.GetToken(t)
+	if err != nil {
+		return nil, fmt.Errorf("unexpected error during getting access token: %w", err)
+	}
+	if result.IsExpired() {
+		return nil, ErrAccessTokenExpired
+	}
+	return &result, nil
+}
+
+func ProcessCheckAuthroizationError(w http.ResponseWriter, err error) {
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrAccessTokenExpired):
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		default:
+			http.Error(w, "Internal error", http.StatusInternalServerError)
+		}
 	}
 }
