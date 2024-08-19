@@ -159,6 +159,8 @@ func CheckAuthorization(r *http.Request) (*services.AccessToken, error) {
 func ProcessCheckAuthroizationError(w http.ResponseWriter, err error) {
 	if err != nil {
 		switch {
+		case errors.Is(err, services.ErrNotFoundAccessToken):
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		case errors.Is(err, ErrAccessTokenExpired):
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		default:

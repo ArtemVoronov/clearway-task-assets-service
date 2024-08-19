@@ -150,6 +150,9 @@ func (s *AuthService) GetToken(token string) (AccessToken, error) {
 		})()
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return accessToken, ErrNotFoundAccessToken
+		}
 		return accessToken, err
 	}
 
