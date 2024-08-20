@@ -46,6 +46,15 @@ func initRestApiRoutes() http.Handler {
 	routes.Handle("DELETE /api/asset/{name}", v1.AuthRequired(v1.DeleteAsset))
 	routes.Handle("POST /api/auth", v1.ErrorHandleRequired(v1.Authenicate))
 	routes.Handle("POST /api/users", v1.ErrorHandleRequired(v1.CreateUser))
+
+	// CORS
+	processOptionsRequestsFunc := v1.NewProcessOptionsRequestsFunc()
+	routes.HandleFunc("OPTIONS /api/assets", processOptionsRequestsFunc)
+	routes.HandleFunc("OPTIONS /api/upload-asset/{name}", processOptionsRequestsFunc)
+	routes.HandleFunc("OPTIONS /api/asset/{name}", processOptionsRequestsFunc)
+	routes.HandleFunc("OPTIONS /api/auth", processOptionsRequestsFunc)
+	routes.HandleFunc("OPTIONS /api/users", processOptionsRequestsFunc)
+
 	return v1.NewLoggerHandler(v1.NewBodySizeLimitHandler(routes))
 }
 

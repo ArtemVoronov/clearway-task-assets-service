@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -183,6 +184,30 @@ func WithStatus(err error, message string, status int) error {
 		error:   err,
 		status:  status,
 		message: message,
+	}
+}
+
+func NewProcessOptionsRequestsFunc() http.HandlerFunc {
+	allowedHeaders, ok := os.LookupEnv("CORS_ALLOWED_HEADERS")
+	if !ok {
+		allowedHeaders = app.DefaultCORSAllowedHeaders
+	}
+	allowedOrigin, ok := os.LookupEnv("CORS_ALLOWED_ORIGIN")
+	if !ok {
+		allowedOrigin = app.DefaultCORSAllowedOrigin
+	}
+	allowedMethods, ok := os.LookupEnv("CORS_ALLOWED_METHODS")
+	if !ok {
+		allowedMethods = app.DefaultCORSAllowedMethods
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Access-Control-Allow-Headers", allowedHeaders)
+		h.Set("Access-Control-Allow-Origin", allowedOrigin)
+		h.Set("Access-Control-Allow-Methods", allowedMethods)
+		h.Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
 	}
 }
 
