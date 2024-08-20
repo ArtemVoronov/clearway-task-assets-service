@@ -22,6 +22,7 @@ const (
 	DefaultCORSAllowedOrigin                 = "*"
 	DefaultCORSAllowedHeaders                = "X-Requested-With"
 	DefaultCORSAllowedMethods                = "GET,POST,PUT,DELETE,OPTIONS"
+	DefaultShardsCount                       = 2
 
 	// Current implementation of assets storing is based on large objects (see for details https://www.postgresql.org/docs/current/largeobjects.html).
 	// A large object cannot exceed 4TB for PostgreSQL 9.3 or newer or 2GB for older versions.

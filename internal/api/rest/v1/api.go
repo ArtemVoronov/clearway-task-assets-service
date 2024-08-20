@@ -23,7 +23,6 @@ import (
 // 7. delete file without user
 
 // TODO: add tech endpoints
-// TODO: add configuration for shards count (DEFAULT_BUCKET_FACTOR)
 
 type LoggerHandler struct {
 	handler http.Handler

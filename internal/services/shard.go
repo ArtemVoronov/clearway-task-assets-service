@@ -6,7 +6,6 @@ import (
 )
 
 const BUCKET_NUMBER = 65536
-const DEFAULT_BUCKET_FACTOR = 2
 
 type Interval struct {
 	From uint64

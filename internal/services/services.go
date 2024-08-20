@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -91,8 +92,12 @@ func (s *Services) Shutdown() error {
 }
 
 func initPostgreServicesForAssets() ([]*PostgreSQLService, error) {
-	pgServices := make([]*PostgreSQLService, 0, DEFAULT_BUCKET_FACTOR)
-	for i := 1; i <= DEFAULT_BUCKET_FACTOR; i++ {
+	shardsCount, err := parseDatabaseShardsCount()
+	if err != nil {
+		return nil, err
+	}
+	pgServices := make([]*PostgreSQLService, 0, shardsCount)
+	for i := 1; i <= shardsCount; i++ {
 		pgService, err := initPostgreServiceBySuffix(fmt.Sprintf("assets_shard_%v", i))
 		if err != nil {
 			return nil, fmt.Errorf("unable to create postgresql service for assets: %w", err)
@@ -173,4 +178,22 @@ func parseAccessTokenTTL() (time.Duration, error) {
 		accessTokenTTLStr = app.DefaultAccessTokenTTL
 	}
 	return time.ParseDuration(accessTokenTTLStr)
+}
+
+func parseDatabaseShardsCount() (int, error) {
+	result := app.DefaultShardsCount
+	shardsStr, ok := os.LookupEnv("DATABASE_SHARDS_COUNT")
+	if ok {
+		converted, err := strconv.Atoi(shardsStr)
+		if err != nil {
+			return 0, fmt.Errorf("unable to parse 'DATABASE_SHARDS_COUNT' parameter: %w", err)
+		}
+		result = converted
+	}
+
+	if result < 1 {
+		return 0, fmt.Errorf("parameter 'DATABASE_SHARDS_COUNT' should by greater than or equal to 1")
+	}
+
+	return result, nil
 }
