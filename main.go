@@ -22,7 +22,10 @@ func main() {
 		log.Fatalf("error during server config creating: %s", err)
 	}
 
-	routes := initRestApiRoutes()
+	routes, err := initRestApiRoutes()
+	if err != nil {
+		log.Fatalf("error during routes creating: %s", err)
+	}
 
 	app.StartHttpServer(httpServerConfig, routes, onShutdown)
 }
@@ -38,7 +41,7 @@ func initAppServices() {
 	services.Instance()
 }
 
-func initRestApiRoutes() http.Handler {
+func initRestApiRoutes() (http.Handler, error) {
 	routes := http.NewServeMux()
 	routes.Handle("GET /api/assets", v1.AuthRequired(v1.LoadAssetsList))
 	routes.Handle("POST /api/upload-asset/{name}", v1.AuthRequired(v1.StoreAsset))
@@ -55,7 +58,12 @@ func initRestApiRoutes() http.Handler {
 	routes.HandleFunc("OPTIONS /api/auth", processOptionsRequestsFunc)
 	routes.HandleFunc("OPTIONS /api/users", processOptionsRequestsFunc)
 
-	return v1.NewLoggerHandler(v1.NewBodySizeLimitHandler(routes))
+	bodyMaxSize, err := app.ParseBodyMaxSize()
+	if err != nil {
+		return nil, err
+	}
+
+	return v1.NewLoggerHandler(v1.NewBodySizeLimitHandler(routes, bodyMaxSize)), nil
 }
 
 func onShutdown() {

@@ -59,6 +59,37 @@ func createServices() (*Services, error) {
 	}, nil
 }
 
+func (s *Services) Shutdown() error {
+	result := []error{}
+	l := len(s.pgForAssets)
+	for i := 0; i < l; i++ {
+		err := s.pgForAssets[i].Shutdown()
+		if err != nil {
+			result = append(result, err)
+		}
+	}
+	err := s.pgForUnsharded.Shutdown()
+	if err != nil {
+		result = append(result, err)
+	}
+	err = s.AuthService.Shutdown()
+	if err != nil {
+		result = append(result, err)
+	}
+	err = s.UsersService.Shutdown()
+	if err != nil {
+		result = append(result, err)
+	}
+	err = s.AssetsService.Shutdown()
+	if err != nil {
+		result = append(result, err)
+	}
+	if len(result) > 0 {
+		errors.Join(result...)
+	}
+	return nil
+}
+
 func initPostgreServicesForAssets() ([]*PostgreSQLService, error) {
 	pgServices := make([]*PostgreSQLService, 0, DEFAULT_BUCKET_FACTOR)
 	for i := 1; i <= DEFAULT_BUCKET_FACTOR; i++ {
@@ -92,47 +123,48 @@ func initPostgreServiceBySuffix(databaseSuffix string) (*PostgreSQLService, erro
 	if !ok || len(strings.Trim(pgDatabasePrefix, " ")) == 0 {
 		return nil, fmt.Errorf("missed 'DATABASE_NAME_PREFIX' parameter")
 	}
+	pgConnectTimeout, ok := os.LookupEnv("DATABASE_CONNECT_TIMEOUT_IN_SECONDS")
+	if !ok || len(strings.Trim(pgConnectTimeout, " ")) == 0 {
+		return nil, fmt.Errorf("missed 'DATABASE_CONNECT_TIMEOUT_IN_SECONDS' parameter")
+	}
+	pgPoolMaxConnections, ok := os.LookupEnv("DATABASE_CONNECTIONS_POOL_MAX_CONNS")
+	if !ok || len(strings.Trim(pgPoolMaxConnections, " ")) == 0 {
+		return nil, fmt.Errorf("missed 'DATABASE_CONNECTIONS_POOL_MAX_CONNS' parameter")
+	}
+	pgPoolMinConnections, ok := os.LookupEnv("DATABASE_CONNECTIONS_POOL_MIN_CONNS")
+	if !ok || len(strings.Trim(pgPoolMinConnections, " ")) == 0 {
+		return nil, fmt.Errorf("missed 'DATABASE_CONNECTIONS_POOL_MIN_CONNS' parameter")
+	}
+	pgPoolMaxConnLifeTime, ok := os.LookupEnv("DATABASE_CONNECTIONS_POOL_MAX_CONN_LIFE_TIME")
+	if !ok || len(strings.Trim(pgPoolMaxConnLifeTime, " ")) == 0 {
+		return nil, fmt.Errorf("missed 'DATABASE_CONNECTIONS_POOL_MAX_CONN_LIFE_TIME' parameter")
+	}
+	pgPoolMaxConnIdleTime, ok := os.LookupEnv("DATABASE_CONNECTIONS_POOL_MAX_CONN_IDLE_TIME")
+	if !ok || len(strings.Trim(pgPoolMaxConnIdleTime, " ")) == 0 {
+		return nil, fmt.Errorf("missed 'DATABASE_CONNECTIONS_POOL_MAX_CONN_IDLE_TIME' parameter")
+	}
+	pgPoolMinConnHealthcheckPeriod, ok := os.LookupEnv("DATABASE_CONNECTIONS_POOL_HEALTH_CHECK_PERIOD")
+	if !ok || len(strings.Trim(pgPoolMinConnHealthcheckPeriod, " ")) == 0 {
+		return nil, fmt.Errorf("missed 'DATABASE_CONNECTIONS_POOL_HEALTH_CHECK_PERIOD' parameter")
+	}
 
-	pgPoolParams := "?pool_max_conns=100"
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("?connect_timeout=%v", pgConnectTimeout))
+	b.WriteString(fmt.Sprintf("&pool_max_conns=%v", pgPoolMaxConnections))
+	b.WriteString(fmt.Sprintf("&pool_min_conns=%v", pgPoolMinConnections))
+	b.WriteString(fmt.Sprintf("&pool_max_conn_lifetime=%v", pgPoolMaxConnLifeTime))
+	b.WriteString(fmt.Sprintf("&pool_max_conn_idle_time=%v", pgPoolMaxConnIdleTime))
+	b.WriteString(fmt.Sprintf("&pool_health_check_period=%v", pgPoolMinConnHealthcheckPeriod))
+	pgPoolParams := b.String()
 
 	pgDatabase := fmt.Sprintf("%v_%v", pgDatabasePrefix, databaseSuffix)
 	connString := fmt.Sprintf("postgres://%v:%v@%v:%v/%v%v", pgUser, pgPassword, pgHost, pgPort, pgDatabase, pgPoolParams)
+
 	result, err := CreatePostgreSQLService(connString)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create postgresql service for '%v': %w", pgDatabase, err)
 	}
 	return result, nil
-}
-
-func (s *Services) Shutdown() error {
-	result := []error{}
-	l := len(s.pgForAssets)
-	for i := 0; i < l; i++ {
-		err := s.pgForAssets[i].Shutdown()
-		if err != nil {
-			result = append(result, err)
-		}
-	}
-	err := s.pgForUnsharded.Shutdown()
-	if err != nil {
-		result = append(result, err)
-	}
-	err = s.AuthService.Shutdown()
-	if err != nil {
-		result = append(result, err)
-	}
-	err = s.UsersService.Shutdown()
-	if err != nil {
-		result = append(result, err)
-	}
-	err = s.AssetsService.Shutdown()
-	if err != nil {
-		result = append(result, err)
-	}
-	if len(result) > 0 {
-		errors.Join(result...)
-	}
-	return nil
 }
 
 func parseAccessTokenTTL() (time.Duration, error) {

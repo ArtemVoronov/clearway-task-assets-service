@@ -22,24 +22,8 @@ import (
 // 6. delete user with files
 // 7. delete file without user
 
-// TODO: add configuration of body max
 // TODO: add tech endpoints
-// TODO: add parameters for pool configuration
 // TODO: add configuration for shards count (DEFAULT_BUCKET_FACTOR)
-
-func isBodyLimitExceeded(r *http.Request) (bool, error) {
-	contentLength := r.Header.Get("Content-Length")
-	if len(contentLength) == 0 {
-		return false, nil
-	}
-
-	bodyLength, err := strconv.Atoi(contentLength)
-	if err != nil {
-		return false, fmt.Errorf("unable to parse 'Content-Length' header: %w", err)
-	}
-
-	return bodyLength > app.DefaultBodyMaxSize, nil
-}
 
 type LoggerHandler struct {
 	handler http.Handler
@@ -100,25 +84,43 @@ func AuthRequired(handlerToWrap AuthenticateHandlerFunc) *AuthenicateHandler {
 }
 
 type BodySizeLimitHandler struct {
-	handler http.Handler
+	handler     http.Handler
+	bodyMaxSize int
 }
 
 func (h *BodySizeLimitHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	isExceeded, err := isBodyLimitExceeded(r)
+	isExceeded, err := h.isBodyLimitExceeded(r)
 	if err != nil {
 		processHttpError(w, WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError))
 		return
 	}
 	if isExceeded {
-		processHttpError(w, WithStatus(err, fmt.Sprintf("Body size exceeds the limit in %v bytes", app.DefaultBodyMaxSize), http.StatusBadRequest))
+		processHttpError(w, WithStatus(err, fmt.Sprintf("body size exceeds the limit in %v bytes", h.bodyMaxSize), http.StatusBadRequest))
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, app.DefaultBodyMaxSize)
 	h.handler.ServeHTTP(w, r)
 }
 
-func NewBodySizeLimitHandler(handlerToWrap http.Handler) *BodySizeLimitHandler {
-	return &BodySizeLimitHandler{handlerToWrap}
+func (h *BodySizeLimitHandler) isBodyLimitExceeded(r *http.Request) (bool, error) {
+	contentLength := r.Header.Get("Content-Length")
+	if len(contentLength) == 0 {
+		return false, nil
+	}
+
+	bodyLength, err := strconv.Atoi(contentLength)
+	if err != nil {
+		return false, fmt.Errorf("unable to parse 'Content-Length' header: %w", err)
+	}
+
+	return bodyLength > h.bodyMaxSize, nil
+}
+
+func NewBodySizeLimitHandler(handlerToWrap http.Handler, bodyMaxSize int) *BodySizeLimitHandler {
+	return &BodySizeLimitHandler{
+		handler:     handlerToWrap,
+		bodyMaxSize: bodyMaxSize,
+	}
 }
 
 type ErrorsHandler struct {

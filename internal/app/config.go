@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -103,4 +104,18 @@ func NewHttpServerConfig() (*HttpServerConfig, error) {
 		WriteTimeout:            writeTimeout,
 		GracefulShutdownTimeout: gracefulShutdownTimeout,
 	}, nil
+}
+
+func ParseBodyMaxSize() (int, error) {
+	bodyMaxSize := DefaultBodyMaxSize
+	bodyMaxSizeStr, ok := os.LookupEnv("HTTP_REQUEST_BODY_MAX_SIZE_IN_BYTES")
+	if ok {
+		converted, err := strconv.Atoi(bodyMaxSizeStr)
+		if err != nil {
+			return 0, fmt.Errorf("unable to parse 'HTTP_REQUEST_BODY_MAX_SIZE_IN_BYTES' parameter: %w", err)
+		}
+		bodyMaxSize = converted
+	}
+
+	return bodyMaxSize, nil
 }
