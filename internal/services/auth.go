@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app/utils"
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
