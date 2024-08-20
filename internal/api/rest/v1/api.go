@@ -13,16 +13,7 @@ import (
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
 
-// TODO: check error cases, add appopriate tests
-// 1. user not found
-// 2. token is expired
-// 3. too large file
-// 4. file is not belonds to the user
-// 5. user exceed the limits (3 types of limit: max 100 files, for each file 4GB, for total space 15GB)
-// 6. delete user with files
-// 7. delete file without user
-
-// TODO: add tech endpoints
+// TODO: add limits for users, i.e. max 100 files, max file size 4GB, for total files 15GB
 
 type LoggerHandler struct {
 	handler http.Handler

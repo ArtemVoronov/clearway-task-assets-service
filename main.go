@@ -1,6 +1,20 @@
+// Assets Service:
+//
+//	Schemes: https
+//	BasePath: /
+//	Version: 1.0
+//	Host: https://localhost:3005
+//
+//  SecurityDefinitions:
+//    Bearer:
+//      type: apiKey
+//      name: Authorization
+//      in: header
+// swagger:meta
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -58,6 +72,12 @@ func initRestApiRoutes() (http.Handler, error) {
 	routes.HandleFunc("OPTIONS /api/auth", processOptionsRequestsFunc)
 	routes.HandleFunc("OPTIONS /api/users", processOptionsRequestsFunc)
 
+	// API Spec
+	fs := http.FileServer(http.Dir("./api/swagger"))
+	routes.Handle("GET /api/doc/", http.StripPrefix("/api/doc/", fs))
+	routes.Handle("GET /api/", v1.ErrorHandleRequired(apiSpec))
+	routes.Handle("GET /health", v1.ErrorHandleRequired(health))
+
 	bodyMaxSize, err := app.ParseBodyMaxSize()
 	if err != nil {
 		return nil, err
@@ -85,4 +105,38 @@ func initAppMonitoring() {
 			}
 		}()
 	}
+}
+
+func apiSpec(w http.ResponseWriter, r *http.Request) error {
+	spec, err := os.ReadFile("./api/swagger/swagger.yaml")
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/yaml")
+	w.WriteHeader(http.StatusOK)
+	w.Write(spec)
+	return nil
+}
+
+// Used rendering cumulative information about the readiness and performance of the service
+// swagger:model
+type AppInfo struct {
+	// Version
+	// in: string
+	Version string `json:"version"`
+	// State
+	// in: string
+	State string `json:"state"`
+}
+
+func health(w http.ResponseWriter, r *http.Request) error {
+	appInfo := AppInfo{"1.0", "running"}
+	result, err := json.Marshal(appInfo)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(result)
+	return nil
 }
