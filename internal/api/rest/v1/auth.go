@@ -19,7 +19,7 @@ var regExpAuthHeaderBearerToken = regexp.MustCompile("^Bearer (.+)$")
 
 const maxAttempts = 10
 
-func authenicate(w http.ResponseWriter, r *http.Request) {
+func Authenicate(w http.ResponseWriter, r *http.Request) {
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {

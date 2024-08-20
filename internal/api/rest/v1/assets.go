@@ -17,14 +17,9 @@ import (
 
 var regExpBoundaryString = regexp.MustCompile("^.+boundary=(.+)$")
 
-func loadAssetsList(w http.ResponseWriter, r *http.Request) {
-	token, err := CheckAuthorization(r)
-	if err != nil {
-		ProcessCheckAuthroizationError(w, err)
-		return
-	}
-	log.Printf("attempt to load assets list for user '%v'\n", token.UserUUID)
-	list, err := services.Instance().AssetsService.GetAssetList(token.UserUUID)
+func LoadAssetsList(w http.ResponseWriter, r *http.Request, t *services.AccessToken) {
+	log.Printf("attempt to load assets list for user '%v'\n", t.UserUUID)
+	list, err := services.Instance().AssetsService.GetAssetList(t.UserUUID)
 	if err != nil {
 		switch {
 		default:
@@ -44,19 +39,14 @@ func loadAssetsList(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func loadAsset(w http.ResponseWriter, r *http.Request) {
-	token, err := CheckAuthorization(r)
-	if err != nil {
-		ProcessCheckAuthroizationError(w, err)
-		return
-	}
-	assetName := getField(r, 0)
+func LoadAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) {
+	assetName := r.PathValue("name")
 	log.Printf("attempt to load asset '%v'\n", assetName)
 
 	var startStreaming services.StartStreamingFunc = func(content io.ReadSeeker) {
 		http.ServeContent(w, r, assetName, time.Now(), content)
 	}
-	err = services.Instance().AssetsService.GetAsset(assetName, token.UserUUID, startStreaming)
+	err := services.Instance().AssetsService.GetAsset(assetName, t.UserUUID, startStreaming)
 
 	if err != nil {
 		switch {
@@ -70,16 +60,11 @@ func loadAsset(w http.ResponseWriter, r *http.Request) {
 	// correct status code will be returned by http.ServeContent
 }
 
-func deleteAsset(w http.ResponseWriter, r *http.Request) {
-	token, err := CheckAuthorization(r)
-	if err != nil {
-		ProcessCheckAuthroizationError(w, err)
-		return
-	}
-	assetName := getField(r, 0)
+func DeleteAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) {
+	assetName := r.PathValue("name")
 	log.Printf("attempt to delete asset '%v'\n", assetName)
 
-	err = services.Instance().AssetsService.DeleteAsset(assetName, token.UserUUID)
+	err := services.Instance().AssetsService.DeleteAsset(assetName, t.UserUUID)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrNotFoundAsset):
@@ -95,17 +80,12 @@ func deleteAsset(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func storeAsset(w http.ResponseWriter, r *http.Request) {
-	token, err := CheckAuthorization(r)
-	if err != nil {
-		ProcessCheckAuthroizationError(w, err)
-		return
-	}
-	assetName := getField(r, 0)
+func StoreAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) {
+	assetName := r.PathValue("name")
 	contentType := r.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "multipart/form-data") {
 		log.Println("special case of mime type: multipart/form-data")
-		err := storeMultipartedAssets(contentType, r, token)
+		err := storeMultipartedAssets(contentType, r, t)
 		if err != nil {
 			processStoreAsserError(err, w)
 			return
@@ -113,7 +93,7 @@ func storeAsset(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Println("default case for others mime types")
 		log.Printf("attempt to store asset '%v'\n", assetName)
-		err := storeOneAsset(assetName, r.Body, token)
+		err := storeOneAsset(assetName, r.Body, t)
 		if err != nil {
 			processStoreAsserError(err, w)
 			return

@@ -14,16 +14,7 @@ type UserDTO struct {
 	Password string `json:"password"`
 }
 
-func ProcessUsersRoute(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "POST":
-		createUser(w, r)
-	default:
-		http.Error(w, "Not Implemented", http.StatusNotImplemented)
-	}
-}
-
-func createUser(w http.ResponseWriter, r *http.Request) {
+func CreateUser(w http.ResponseWriter, r *http.Request) {
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
@@ -49,6 +40,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte("Done"))
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
 	w.WriteHeader(http.StatusOK)
 }

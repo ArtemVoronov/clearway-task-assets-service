@@ -19,7 +19,7 @@ type HttpServerConfig struct {
 	GracefulShutdownTimeout time.Duration
 }
 
-func StartHttpServer(config *HttpServerConfig, routes *http.ServeMux, shutdown func()) {
+func StartHttpServer(config *HttpServerConfig, routes http.Handler, shutdown func()) {
 	if shutdown != nil {
 		defer shutdown()
 	}

@@ -38,10 +38,15 @@ func initAppServices() {
 	services.Instance()
 }
 
-func initRestApiRoutes() *http.ServeMux {
+func initRestApiRoutes() http.Handler {
 	routes := http.NewServeMux()
-	routes.HandleFunc("/", v1.HandleRoute)
-	return routes
+	routes.Handle("GET /api/assets", v1.AuthRequired(v1.LoadAssetsList))
+	routes.Handle("POST /api/upload-asset/{name}", v1.AuthRequired(v1.StoreAsset))
+	routes.Handle("GET /api/asset/{name}", v1.AuthRequired(v1.LoadAsset))
+	routes.Handle("DELETE /api/asset/{name}", v1.AuthRequired(v1.DeleteAsset))
+	routes.HandleFunc("POST /api/auth", v1.Authenicate)
+	routes.HandleFunc("POST /api/users", v1.CreateUser)
+	return v1.NewLoggerHandler(v1.NewBodySizeLimitHandler(routes))
 }
 
 func onShutdown() {
