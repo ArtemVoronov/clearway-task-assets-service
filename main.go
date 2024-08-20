@@ -44,8 +44,8 @@ func initRestApiRoutes() http.Handler {
 	routes.Handle("POST /api/upload-asset/{name}", v1.AuthRequired(v1.StoreAsset))
 	routes.Handle("GET /api/asset/{name}", v1.AuthRequired(v1.LoadAsset))
 	routes.Handle("DELETE /api/asset/{name}", v1.AuthRequired(v1.DeleteAsset))
-	routes.HandleFunc("POST /api/auth", v1.Authenicate)
-	routes.HandleFunc("POST /api/users", v1.CreateUser)
+	routes.Handle("POST /api/auth", v1.ErrorHandleRequired(v1.Authenicate))
+	routes.Handle("POST /api/users", v1.ErrorHandleRequired(v1.CreateUser))
 	return v1.NewLoggerHandler(v1.NewBodySizeLimitHandler(routes))
 }
 

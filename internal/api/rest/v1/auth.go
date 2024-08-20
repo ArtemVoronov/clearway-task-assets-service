@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -19,37 +19,34 @@ var regExpAuthHeaderBearerToken = regexp.MustCompile("^Bearer (.+)$")
 
 const maxAttempts = 10
 
-func Authenicate(w http.ResponseWriter, r *http.Request) {
+func Authenicate(w http.ResponseWriter, r *http.Request) error {
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 	}
 
-	var user UserDTO
+	var user Credentials
 	err = json.Unmarshal(b, &user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 	}
 
 	ipAddr, err := parseIpAddr(r.RemoteAddr)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 	}
 
 	token, err := createOrUpdateToken(user.Login, user.Password, ipAddr)
 	if err != nil {
-		processAuthError(err, w)
-		return
+		return processAuthError(err)
 	}
 
-	log.Printf("user '%v' authenicated\n", user.Login)
+	slog.Info(fmt.Sprintf("user '%v' authenicated\n", user.Login))
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(fmt.Sprintf("{\"token\":\"%v\"}", token)))
 	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("{\"token\":\"%v\"}", token)))
+	return nil
 }
 
 func createOrUpdateToken(login, password, ipAddr string) (string, error) {
@@ -69,16 +66,16 @@ func createOrUpdateToken(login, password, ipAddr string) (string, error) {
 	return token, err
 }
 
-func processAuthError(err error, w http.ResponseWriter) {
+func processAuthError(err error) error {
 	switch {
 	case errors.Is(err, services.ErrDuplicateAccessToken):
-		http.Error(w, "Duplicate access token generation", http.StatusInternalServerError)
+		return WithStatus(err, DuplicateAccessTokenMsg, http.StatusInternalServerError)
 	case errors.Is(err, services.ErrInvalidPassword):
-		http.Error(w, "Invalid credentials", http.StatusBadRequest)
+		return WithStatus(err, InvalidCredentialsMsg, http.StatusBadRequest)
 	case errors.Is(err, services.ErrUserNotFound):
-		http.Error(w, "User not found", http.StatusBadRequest)
+		return WithStatus(err, InvalidCredentialsMsg, http.StatusBadRequest)
 	default:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"regexp"
@@ -17,92 +17,86 @@ import (
 
 var regExpBoundaryString = regexp.MustCompile("^.+boundary=(.+)$")
 
-func LoadAssetsList(w http.ResponseWriter, r *http.Request, t *services.AccessToken) {
-	log.Printf("attempt to load assets list for user '%v'\n", t.UserUUID)
+func LoadAssetsList(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
+	slog.Info(fmt.Sprintf("attempt to load assets list for user '%v'\n", t.UserUUID))
 	list, err := services.Instance().AssetsService.GetAssetList(t.UserUUID)
 	if err != nil {
-		switch {
-		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		return
+		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 	}
 
 	result, err := json.Marshal(list)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(result)
 	w.WriteHeader(http.StatusOK)
+	w.Write(result)
+	return nil
 }
 
-func LoadAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) {
+func LoadAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
 	assetName := r.PathValue("name")
-	log.Printf("attempt to load asset '%v'\n", assetName)
+	slog.Info(fmt.Sprintf("attempt to load asset '%v'\n", assetName))
 
 	var startStreaming services.StartStreamingFunc = func(content io.ReadSeeker) {
 		http.ServeContent(w, r, assetName, time.Now(), content)
 	}
 	err := services.Instance().AssetsService.GetAsset(assetName, t.UserUUID, startStreaming)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrNotFoundAsset):
-			http.Error(w, err.Error(), http.StatusNotFound)
+			return WithStatus(err, AssetNotFoundMsg, http.StatusNotFound)
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 		}
-		return
 	}
 	// correct status code will be returned by http.ServeContent
+	return nil
 }
 
-func DeleteAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) {
+func DeleteAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
 	assetName := r.PathValue("name")
-	log.Printf("attempt to delete asset '%v'\n", assetName)
+	slog.Info(fmt.Sprintf("attempt to delete asset '%v'\n", assetName))
 
 	err := services.Instance().AssetsService.DeleteAsset(assetName, t.UserUUID)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrNotFoundAsset):
-			http.Error(w, err.Error(), http.StatusNotFound)
+			return WithStatus(err, AssetNotFoundMsg, http.StatusNotFound)
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 		}
-		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"ok"}`))
 	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(`{"status":"ok"}`))
+	return nil
 }
 
-func StoreAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) {
+func StoreAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
 	assetName := r.PathValue("name")
 	contentType := r.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "multipart/form-data") {
-		log.Println("special case of mime type: multipart/form-data")
+		slog.Info("special case of mime type: multipart/form-data")
 		err := storeMultipartedAssets(contentType, r, t)
 		if err != nil {
-			processStoreAsserError(err, w)
-			return
+			return processStoreAsserError(err)
 		}
 	} else {
-		log.Println("default case for others mime types")
-		log.Printf("attempt to store asset '%v'\n", assetName)
+		slog.Info("default case for others mime types")
+		slog.Info(fmt.Sprintf("attempt to store asset '%v'\n", assetName))
 		err := storeOneAsset(assetName, r.Body, t)
 		if err != nil {
-			processStoreAsserError(err, w)
-			return
+			return processStoreAsserError(err)
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"ok"}`))
 	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(`{"status":"ok"}`))
+	return nil
 }
 
 func storeOneAsset(assetName string, reader io.Reader, t *services.AccessToken) error {
@@ -125,7 +119,7 @@ func storeMultipartedAssets(contentType string, r *http.Request, t *services.Acc
 			return err
 		}
 		miltipartedAssetName := parseMultipartAssetName(p)
-		log.Printf("attempt to store mutliparted asset '%v'\n", miltipartedAssetName)
+		slog.Info(fmt.Sprintf("attempt to store mutliparted asset '%v'\n", miltipartedAssetName))
 		err = storeOneAsset(miltipartedAssetName, p, t)
 		if err != nil {
 			return err
@@ -143,12 +137,12 @@ func parseMultipartAssetName(p *multipart.Part) string {
 	}
 }
 
-func processStoreAsserError(err error, w http.ResponseWriter) {
+func processStoreAsserError(err error) error {
 	switch {
 	case errors.Is(err, services.ErrDuplicateAsset):
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		return WithStatus(err, err.Error(), http.StatusBadRequest)
 	default:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 	}
 }
 

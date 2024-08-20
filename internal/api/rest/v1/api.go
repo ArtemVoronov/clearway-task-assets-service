@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,8 +12,6 @@ import (
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
-
-// TODO: unify errors formatting
 
 // TODO: check error cases, add appopriate tests
 // 1. user not found
@@ -42,35 +41,6 @@ func isBodyLimitExceeded(r *http.Request) (bool, error) {
 	return bodyLength > app.DefaultBodyMaxSize, nil
 }
 
-func CheckAuthorization(r *http.Request) (*services.AccessToken, error) {
-	authorizationHeader := r.Header.Get("Authorization")
-	t, err := parseAuthorizationHeader(authorizationHeader)
-	if err != nil {
-		return nil, err
-	}
-	result, err := services.Instance().AuthService.GetToken(t)
-	if err != nil {
-		return nil, fmt.Errorf("unexpected error during getting access token: %w", err)
-	}
-	if result.IsExpired() {
-		return nil, ErrAccessTokenExpired
-	}
-	return &result, nil
-}
-
-func ProcessCheckAuthroizationError(w http.ResponseWriter, err error) {
-	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrNotFoundAccessToken):
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		case errors.Is(err, ErrAccessTokenExpired):
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		default:
-			http.Error(w, "Internal error", http.StatusInternalServerError)
-		}
-	}
-}
-
 type LoggerHandler struct {
 	handler http.Handler
 }
@@ -85,23 +55,47 @@ func NewLoggerHandler(handlerToWrap http.Handler) *LoggerHandler {
 	return &LoggerHandler{handlerToWrap}
 }
 
-type AuthenticatedHandler func(http.ResponseWriter, *http.Request, *services.AccessToken)
+type AuthenticateHandlerFunc func(http.ResponseWriter, *http.Request, *services.AccessToken) error
 
 type AuthenicateHandler struct {
-	handler AuthenticatedHandler
+	handler AuthenticateHandlerFunc
 }
 
 func (h *AuthenicateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	accessToken, err := CheckAuthorization(r)
 	if err != nil {
-		ProcessCheckAuthroizationError(w, err)
+		processHttpError(w, err)
 		return
 	}
 
-	h.handler(w, r, accessToken)
+	err = h.handler(w, r, accessToken)
+	if err != nil {
+		processHttpError(w, err)
+	}
 }
 
-func AuthRequired(handlerToWrap AuthenticatedHandler) *AuthenicateHandler {
+func CheckAuthorization(r *http.Request) (*services.AccessToken, error) {
+	authorizationHeader := r.Header.Get("Authorization")
+	t, err := parseAuthorizationHeader(authorizationHeader)
+	if err != nil {
+		return nil, err
+	}
+	result, err := services.Instance().AuthService.GetToken(t)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrNotFoundAccessToken):
+			return nil, WithStatus(services.ErrNotFoundAccessToken, "Unauthorized", http.StatusUnauthorized)
+		default:
+			return nil, WithStatus(fmt.Errorf("unexpected error during getting access token: %w", err), "Internal error", http.StatusInternalServerError)
+		}
+	}
+	if result.IsExpired() {
+		return nil, WithStatus(ErrAccessTokenExpired, "Unauthorized", http.StatusUnauthorized)
+	}
+	return &result, nil
+}
+
+func AuthRequired(handlerToWrap AuthenticateHandlerFunc) *AuthenicateHandler {
 	return &AuthenicateHandler{handlerToWrap}
 }
 
@@ -126,3 +120,76 @@ func (h *BodySizeLimitHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 func NewBodySizeLimitHandler(handlerToWrap http.Handler) *BodySizeLimitHandler {
 	return &BodySizeLimitHandler{handlerToWrap}
 }
+
+type ErrorsHandler struct {
+	handler ErrorProcessedHandler
+}
+
+type ErrorProcessedHandler func(http.ResponseWriter, *http.Request) error
+
+func (h *ErrorsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	err := h.handler(w, r)
+	if err != nil {
+		processHttpError(w, err)
+	}
+}
+
+func processHttpError(w http.ResponseWriter, err error) {
+	var statusError StatusError
+	var status int
+	var errorMsg string
+	if errors.As(err, &statusError) {
+		if statusError.Status() == http.StatusInternalServerError {
+			slog.Error(err.Error())
+		}
+		status = statusError.Status()
+		errorMsg = statusError.Error()
+	} else {
+		slog.Error(err.Error())
+		status = UnexpectedError.Status()
+		errorMsg = UnexpectedError.Error()
+	}
+
+	h := w.Header()
+	h.Del("Content-Length")
+	h.Set("Content-Type", "application/json; charset=utf-8")
+	h.Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(status)
+	fmt.Fprintln(w, errorMsg)
+}
+
+func ErrorHandleRequired(handlerToWrap ErrorProcessedHandler) *ErrorsHandler {
+	return &ErrorsHandler{handlerToWrap}
+}
+
+var UnexpectedError = statusError{error: fmt.Errorf("unexpected error"), message: "Unexpected error", status: http.StatusInternalServerError}
+
+type StatusError interface {
+	error
+	Status() int
+}
+
+type statusError struct {
+	error
+	message string
+	status  int
+}
+
+func (e statusError) Unwrap() error { return e.error }
+func (e statusError) Status() int   { return e.status }
+func (e statusError) Error() string { return fmt.Sprintf("{\"error\":\"%s\"}", e.message) }
+
+func WithStatus(err error, message string, status int) error {
+	return statusError{
+		error:   err,
+		status:  status,
+		message: message,
+	}
+}
+
+// message for REST API users
+const InternalServerErrorMsg = "Internal Server Error"
+const AssetNotFoundMsg = "Asset not found"
+const UserDuplicateMsg = "User exists already"
+const InvalidCredentialsMsg = "Invalid credentials"
+const DuplicateAccessTokenMsg = "Duplicate access token generation"

@@ -60,7 +60,7 @@ func (s *AssetsService) CreateAsset(name string, userUuid string, file io.Reader
 				switch {
 				case errors.As(internalErr, &pgErr):
 					if pgErr.Code == DuplicateErrorCode {
-						return fmt.Errorf("asset '%v' error: %w", name, ErrDuplicateAsset)
+						return fmt.Errorf("upload asset '%v' error: %w", name, ErrDuplicateAsset)
 					} else {
 						return fmt.Errorf("user '%v' unable to insert assert with name '%v': %w", userUuid, name, internalErr)
 					}
@@ -118,7 +118,7 @@ func (s *AssetsService) GetAsset(name string, userUuid string, startStreaming St
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return fmt.Errorf("asset '%v' error: %w", name, ErrNotFoundAsset)
+			return fmt.Errorf("get asset '%v' error: %w", name, ErrNotFoundAsset)
 		}
 		return fmt.Errorf("unable to get asset: %w", err)
 	}
@@ -195,7 +195,7 @@ func (s *AssetsService) DeleteAsset(name string, userUuid string) error {
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return fmt.Errorf("asset '%v' error: %w", name, ErrNotFoundAsset)
+			return fmt.Errorf("delete asset '%v' error: %w", name, ErrNotFoundAsset)
 		}
 		return fmt.Errorf("user '%v' unable to delete assert with name '%v': %w", userUuid, name, err)
 	}
