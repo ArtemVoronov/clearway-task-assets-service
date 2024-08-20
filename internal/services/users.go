@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app/utils"
 	"github.com/jackc/pgx/v5"
@@ -13,7 +12,6 @@ import (
 
 const (
 	createUserQuery     = `INSERT INTO users (uuid, login, password_hash) VALUES ($1, $2, $3)`
-	getUserUUIDQuery    = `SELECT uuid FROM users WHERE login = $1`
 	getUserByLoginQuery = `SELECT uuid, login, password_hash FROM users WHERE login = $1`
 )
 
@@ -81,31 +79,15 @@ func (s *UsersService) CreateUser(login string, password string) error {
 }
 
 func (s *UsersService) CheckUserExistence(login string) (bool, error) {
-	result, err := s.client.Tx(
-		func(tx pgx.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-			var uuid string
-			internalErr := tx.QueryRow(ctx, getUserUUIDQuery, login).Scan(&uuid)
-			if internalErr != nil && !errors.Is(internalErr, pgx.ErrNoRows) {
-				return "", fmt.Errorf("unable to check user existence with login '%v': %w", login, internalErr)
-			}
-			return uuid, internalErr
-		},
-		pgx.TxOptions{
-			IsoLevel: pgx.ReadCommitted,
-		})()
+	_, err := s.GetUser(login)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		switch {
+		case errors.Is(err, ErrUserNotFound):
 			return false, nil
+		default:
+			return false, err
 		}
-		return false, err
 	}
-	userUuid, ok := result.(string)
-	if !ok {
-		return false, fmt.Errorf("unable to convert result into string")
-	}
-
-	log.Printf("CheckUserExistence: %v\n", userUuid)
-
 	return true, nil
 }
 

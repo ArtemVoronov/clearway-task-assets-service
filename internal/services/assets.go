@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -80,7 +81,7 @@ func (s *AssetsService) CreateAsset(name string, userUuid string, file io.Reader
 				return internalErr
 			}
 			if written == 0 {
-				fmt.Printf("Warning! Stored empty file '%v'\n", name)
+				slog.Info(fmt.Sprintf("Warning! Stored empty file '%v'\n", name))
 			}
 			return internalErr
 		},

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,7 +37,7 @@ func StartHttpServer(config *HttpServerConfig, routes http.Handler, shutdown fun
 		interruptSignals := make(chan os.Signal, 1)
 		signal.Notify(interruptSignals, syscall.SIGINT, syscall.SIGTERM)
 		<-interruptSignals
-		log.Println("server shutting down...")
+		slog.Info("server shutting down...")
 		ctx, cancel := context.WithTimeout(context.Background(), config.GracefulShutdownTimeout)
 		defer cancel()
 		if err := server.Shutdown(ctx); err != nil {
@@ -51,5 +52,5 @@ func StartHttpServer(config *HttpServerConfig, routes http.Handler, shutdown fun
 
 	<-idleCloseConnections
 
-	log.Println("server has been shutdown")
+	slog.Info("server has been shutdown")
 }

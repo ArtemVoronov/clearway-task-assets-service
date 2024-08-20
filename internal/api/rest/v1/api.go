@@ -3,7 +3,6 @@ package v1
 import (
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -48,7 +47,7 @@ type LoggerHandler struct {
 func (h *LoggerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	h.handler.ServeHTTP(w, r)
-	log.Printf("%s %s %v", r.Method, r.URL.Path, time.Since(start))
+	slog.Info(fmt.Sprintf("%s %s %v", r.Method, r.URL.Path, time.Since(start)))
 }
 
 func NewLoggerHandler(handlerToWrap http.Handler) *LoggerHandler {
@@ -84,13 +83,13 @@ func CheckAuthorization(r *http.Request) (*services.AccessToken, error) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrNotFoundAccessToken):
-			return nil, WithStatus(services.ErrNotFoundAccessToken, "Unauthorized", http.StatusUnauthorized)
+			return nil, WithStatus(services.ErrNotFoundAccessToken, UnauthorizedMsg, http.StatusUnauthorized)
 		default:
-			return nil, WithStatus(fmt.Errorf("unexpected error during getting access token: %w", err), "Internal error", http.StatusInternalServerError)
+			return nil, WithStatus(fmt.Errorf("unexpected error during getting access token: %w", err), InternalServerErrorMsg, http.StatusInternalServerError)
 		}
 	}
 	if result.IsExpired() {
-		return nil, WithStatus(ErrAccessTokenExpired, "Unauthorized", http.StatusUnauthorized)
+		return nil, WithStatus(ErrAccessTokenExpired, UnauthorizedMsg, http.StatusUnauthorized)
 	}
 	return &result, nil
 }
@@ -106,11 +105,11 @@ type BodySizeLimitHandler struct {
 func (h *BodySizeLimitHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	isExceeded, err := isBodyLimitExceeded(r)
 	if err != nil {
-		http.Error(w, "Unexpected error during verifying body size", http.StatusInternalServerError)
+		processHttpError(w, WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError))
 		return
 	}
 	if isExceeded {
-		http.Error(w, fmt.Sprintf("Body size exceeds the limit in %v bytes", app.DefaultBodyMaxSize), http.StatusBadRequest)
+		processHttpError(w, WithStatus(err, fmt.Sprintf("Body size exceeds the limit in %v bytes", app.DefaultBodyMaxSize), http.StatusBadRequest))
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, app.DefaultBodyMaxSize)
@@ -193,3 +192,4 @@ const AssetNotFoundMsg = "Asset not found"
 const UserDuplicateMsg = "User exists already"
 const InvalidCredentialsMsg = "Invalid credentials"
 const DuplicateAccessTokenMsg = "Duplicate access token generation"
+const UnauthorizedMsg = "Unauthorized"
