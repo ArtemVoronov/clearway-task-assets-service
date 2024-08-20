@@ -1,10 +1,12 @@
+# Описание прокта
+
+Сервис для хранения данных. Позволяет загружать и выгружать данные с любым из известных mime-типов, в том числе различные файлы большого размера (с учетом физических ограничений сервера, хранилища и конфигурации оных).
+
 # Как запустить
 
 ## В контейнере
 1. `git clone https://github.com/ArtemVoronov/clearway-task-assets-service.git`
 2. `run.sh start`
-
-или
 
 ## На другой среде
 1. `git clone https://github.com/ArtemVoronov/clearway-task-assets-service.git`
