@@ -126,7 +126,7 @@
         "tags": [
           "auth"
         ],
-        "summary": "Authenicates user",
+        "summary": "Authenicate user",
         "operationId": "Authenicate",
         "parameters": [
           {
@@ -213,7 +213,7 @@
         "tags": [
           "users"
         ],
-        "summary": "Creates user",
+        "summary": "Create user",
         "operationId": "CreateUser",
         "parameters": [
           {

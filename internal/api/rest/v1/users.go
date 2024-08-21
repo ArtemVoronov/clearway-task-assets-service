@@ -29,7 +29,7 @@ type Credentials struct {
 
 // swagger:route POST /api/users users CreateUser
 //
-// # Creates user
+// # Create user
 //
 // ---
 // Produces:

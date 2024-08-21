@@ -21,7 +21,7 @@ const maxAttempts = 10
 
 // swagger:route POST /api/auth auth Authenicate
 //
-// # Authenicates user
+// # Authenicate user
 //
 // ---
 // Produces:
