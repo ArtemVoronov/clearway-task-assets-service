@@ -50,6 +50,9 @@
         <sql dbms="postgresql">
             CREATE INDEX access_tokens_b_tree_index_by_user_uuid ON access_tokens (user_uuid);
         </sql>
+        <sql dbms="postgresql">
+            INSERT INTO users (uuid, login, password_hash) VALUES (uuid_generate_v4(), 'alice', encode(digest('secret', 'md5'), 'hex')) ON CONFLICT DO NOTHING;
+        </sql>
         <rollback>
             <dropTable tableName="access_tokens"/>
             <dropTable tableName="users"/>
