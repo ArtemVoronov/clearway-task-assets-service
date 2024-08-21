@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest"
 	v1 "github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app/utils"
@@ -78,8 +77,8 @@ func initRestApiRoutes() (http.Handler, error) {
 	// API Spec
 	fs := http.FileServer(http.Dir("./api/swagger"))
 	routes.Handle("GET /api/doc/", http.StripPrefix("/api/doc/", fs))
-	routes.Handle("GET /api/", v1.ErrorHandleRequired(rest.ApiSpec))
-	routes.Handle("GET /health", v1.ErrorHandleRequired(rest.Health))
+	routes.Handle("GET /api/", v1.ErrorHandleRequired(v1.ApiSpec))
+	routes.Handle("GET /health", v1.ErrorHandleRequired(v1.Health))
 
 	bodyMaxSize, err := app.ParseBodyMaxSize()
 	if err != nil {
