@@ -3,7 +3,7 @@
 //	Schemes: https
 //	BasePath: /
 //	Version: 1.0
-//	Host: https://localhost:3005
+//	Host: localhost:3005
 //
 //  SecurityDefinitions:
 //    Bearer:
@@ -108,11 +108,11 @@ func initAppMonitoring() {
 }
 
 func apiSpec(w http.ResponseWriter, r *http.Request) error {
-	spec, err := os.ReadFile("./api/swagger/swagger.yaml")
+	spec, err := os.ReadFile("./api/swagger/swagger.json")
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Content-Type", "application/yaml")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(spec)
 	return nil
@@ -121,11 +121,14 @@ func apiSpec(w http.ResponseWriter, r *http.Request) error {
 // Used rendering cumulative information about the readiness and performance of the service
 // swagger:model
 type AppInfo struct {
-	// Version
-	// in: string
+	// version
+	//
+	// example: 1.0
+
 	Version string `json:"version"`
-	// State
-	// in: string
+	// state
+	//
+	// example: running
 	State string `json:"state"`
 }
 

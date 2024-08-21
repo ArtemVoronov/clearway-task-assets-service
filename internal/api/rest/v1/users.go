@@ -1,17 +1,3 @@
-// Package routes Users API.
-//
-//	Schemes: https
-//	BasePath: /
-//	Version: 1.0
-//	Host: https://localhost:3005
-//
-//	Consumes:
-//	- application/json
-//
-//	Produces:
-//	- application/json
-//
-// swagger:meta
 package v1
 
 import (
@@ -23,37 +9,23 @@ import (
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/services"
 )
 
-// Credentails represents the login and password pair
-//
-// # Used for authenication and creating users
+// Credentails represents the login and password pair. Used for authenication and creating users
 //
 // swagger:model
 type Credentials struct {
 	// the name for the user
+	//
 	// required: true
 	// example: alice
 	Login string `json:"login"`
+
 	// the password for the user
+	//
 	// required: true
-	// example: alice
+	// example: secret
 	Password string `json:"password"`
 }
 
-// swagger:operation POST /api/users createUser
-//
-// # Creates an user
-//
-// ---
-// produces:
-// - application/json
-// consumes:
-// - application/json
-//
-// responses:
-//
-//	'200':
-//	'400':
-//	'500':
 func CreateUser(w http.ResponseWriter, r *http.Request) error {
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()

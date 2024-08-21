@@ -1,0 +1,30 @@
+{
+  "schemes": [
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "title": "Assets Service:",
+    "version": "1.0"
+  },
+  "host": "localhost:3005",
+  "basePath": "/",
+  "paths": {},
+  "definitions": {
+    "AppInfo": {
+      "description": "Used rendering cumulative information about the readiness and performance of the service",
+      "x-go-package": "github.com/ArtemVoronov/clearway-task-assets-service"
+    },
+    "Credentials": {
+      "description": "Credentails represents the login and password pair. Used for authenication and creating users",
+      "x-go-package": "github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1"
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}

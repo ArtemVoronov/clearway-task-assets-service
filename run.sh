@@ -31,6 +31,10 @@ generateSelfSignedCerts() {
     openssl req -new -x509 -nodes -sha256 -days 365 -key server.key -out server.crt -subj "/C=RU/ST=/L=/O=/OU=/CN=*.clearway-task-example.ru/emailAddress=voronov54@gmail.com"
 }
 
+generateSwagger() {
+    swagger generate spec -o ./api/swagger/swagger.json --scan-models
+}
+
 db1() {
     docker exec -it assets-service-database psql -d assets_service_db_assets_shard_1 -U assets_service_user
 }
@@ -73,6 +77,9 @@ case "$1" in
   dbunsharded)
     dbunsharded
     ;;
+  swagger)
+    generateSwagger
+    ;;
   *)
-    echo "Usage: $0 {start|stop|tail|purge|certs|db1|db2|dbunsharded}"
+    echo "Usage: $0 {start|stop|tail|purge|certs|db1|db2|dbunsharded|swagger}"
 esac
