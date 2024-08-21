@@ -53,6 +53,10 @@ dbunsharded() {
     docker exec -it assets-service-database psql -d assets_service_db_unsharded -U assets_service_user
 }
 
+initDefaultDockerEnv() {
+  cp .env.dev .env
+}
+
 case "$1" in
   start)
     down
@@ -94,6 +98,10 @@ case "$1" in
     start
     tail
   ;;
+  prepare)
+    initDefaultDockerEnv
+    generateSelfSignedCerts
+  ;;
   *)
-    echo "Usage: $0 {start|stop|tail|purge|certs|db1|db2|dbunsharded|swagger|redocandstart}"
+    echo "Usage: $0 {start|stop|tail|purge|certs|db1|db2|dbunsharded|swagger|redocandstart|prepare}"
 esac
