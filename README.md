@@ -7,9 +7,10 @@
 ## В контейнере
 1. `git clone https://github.com/ArtemVoronov/clearway-task-assets-service.git`
 2. `cd clearway-task-assets-service`
-3. `run.sh start`
+3. `./run.sh prepare`
+4. `./run.sh start`
 
-По-умолчанию приложение будет доступно по `https://localhost:3005`
+По-умолчанию приложение будет доступно по `https://localhost:3005`. Для остановки контейнеров можно использовать `./run.sh stop`. А если нужно остановить контейнеры, удалить контейнеры и volumes, то `./run.sh purge`
 
 ## На другой среде
 1. `git clone https://github.com/ArtemVoronov/clearway-task-assets-service.git`
