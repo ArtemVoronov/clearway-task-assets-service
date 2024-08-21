@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"net/http"
 	"os"
 )
@@ -18,8 +17,8 @@ func ApiSpec(w http.ResponseWriter, r *http.Request) error {
 }
 
 // Cumulative information about the readiness and performance of the service
-// swagger:response AppInfo
-type AppInfo struct {
+// swagger:response AppInfoResponse
+type AppInfoResponse struct {
 	// version
 	// example: "1.0"
 	Version string `json:"version"`
@@ -38,16 +37,8 @@ type AppInfo struct {
 //   - application/json
 //
 // responses:
-//   - 200: OkResponse
+//   - 200: AppInfoResponse
 //   - 500: ErrorResponse
 func Health(w http.ResponseWriter, r *http.Request) error {
-	appInfo := AppInfo{"1.0", "running"}
-	result, err := json.Marshal(appInfo)
-	if err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
-	return nil
+	return WriteJSON(w, http.StatusOK, AppInfoResponse{"1.0", "running"})
 }

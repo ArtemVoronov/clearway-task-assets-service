@@ -2,7 +2,6 @@ package v1
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -30,7 +29,7 @@ var regExpBoundaryString = regexp.MustCompile("^.+boundary=(.+)$")
 // - Bearer: []
 //
 // responses:
-//   - 200: OkGetAssetsListResponse
+//   - 200: AssetsListResponse
 //   - 500: ErrorResponse
 func LoadAssetsList(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
 	slog.Info(fmt.Sprintf("attempt to load assets list for user '%v'\n", t.UserUUID))
@@ -39,15 +38,7 @@ func LoadAssetsList(w http.ResponseWriter, r *http.Request, t *services.AccessTo
 		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
 	}
 
-	result, err := json.Marshal(list)
-	if err != nil {
-		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
-	return nil
+	return WriteJSON(w, http.StatusOK, AssetsListResponse{list})
 }
 
 // swagger:route GET /api/asset/{name} assets LoadAsset
@@ -62,7 +53,7 @@ func LoadAssetsList(w http.ResponseWriter, r *http.Request, t *services.AccessTo
 // - Bearer: []
 //
 // responses:
-//   - 200: OkResponse
+//   - 200: StatusResponse
 //   - 404: ErrorResponse
 //   - 500: ErrorResponse
 func LoadAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
@@ -97,7 +88,7 @@ func LoadAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) 
 // - Bearer: []
 //
 // responses:
-//   - 200: OkResponse
+//   - 200: StatusResponse
 //   - 404: ErrorResponse
 //   - 500: ErrorResponse
 func DeleteAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
@@ -114,10 +105,7 @@ func DeleteAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`{"status":"ok"}`))
-	return nil
+	return WriteJSON(w, http.StatusOK, StatusResponse{"ok"})
 }
 
 // swagger:route POST /api/upload-asset/{name} assets StoreAsset
@@ -135,7 +123,7 @@ func DeleteAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken
 // - Bearer: []
 //
 // responses:
-//   - 201: OkResponse
+//   - 201: StatusResponse
 //   - 400: ErrorResponse
 //   - 500: ErrorResponse
 func StoreAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
@@ -156,10 +144,7 @@ func StoreAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken)
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`{"status":"ok"}`))
-	return nil
+	return WriteJSON(w, http.StatusCreated, StatusResponse{"ok"})
 }
 
 func storeOneAsset(assetName string, reader io.Reader, t *services.AccessToken) error {

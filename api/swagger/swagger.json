@@ -39,7 +39,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/OkResponse"
+            "$ref": "#/responses/StatusResponse"
           },
           "404": {
             "$ref": "#/responses/ErrorResponse"
@@ -77,7 +77,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/OkResponse"
+            "$ref": "#/responses/StatusResponse"
           },
           "404": {
             "$ref": "#/responses/ErrorResponse"
@@ -107,7 +107,7 @@
         "operationId": "LoadAssetsList",
         "responses": {
           "200": {
-            "$ref": "#/responses/OkGetAssetsListResponse"
+            "$ref": "#/responses/AssetsListResponse"
           },
           "500": {
             "$ref": "#/responses/ErrorResponse"
@@ -140,7 +140,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/OkAuthResponse"
+            "$ref": "#/responses/TokenResponse"
           },
           "400": {
             "$ref": "#/responses/ErrorResponse"
@@ -191,7 +191,7 @@
         ],
         "responses": {
           "201": {
-            "$ref": "#/responses/OkResponse"
+            "$ref": "#/responses/StatusResponse"
           },
           "400": {
             "$ref": "#/responses/ErrorResponse"
@@ -227,7 +227,7 @@
         ],
         "responses": {
           "201": {
-            "$ref": "#/responses/OkResponse"
+            "$ref": "#/responses/StatusResponse"
           },
           "400": {
             "$ref": "#/responses/ErrorResponse"
@@ -250,7 +250,7 @@
         "operationId": "health",
         "responses": {
           "200": {
-            "$ref": "#/responses/OkResponse"
+            "$ref": "#/responses/AppInfoResponse"
           },
           "500": {
             "$ref": "#/responses/ErrorResponse"
@@ -260,7 +260,7 @@
     }
   },
   "responses": {
-    "AppInfo": {
+    "AppInfoResponse": {
       "description": "Cumulative information about the readiness and performance of the service",
       "headers": {
         "state": {
@@ -275,27 +275,7 @@
         }
       }
     },
-    "ErrorResponse": {
-      "description": "Common error response",
-      "headers": {
-        "error": {
-          "type": "string",
-          "example": "\"Internal server error\"",
-          "description": "status"
-        }
-      }
-    },
-    "OkAuthResponse": {
-      "description": "Success authenication response",
-      "headers": {
-        "token": {
-          "type": "string",
-          "example": "\"b5a302e740d0d84bbdc2254c97f1427b\"",
-          "description": "token"
-        }
-      }
-    },
-    "OkGetAssetsListResponse": {
+    "AssetsListResponse": {
       "description": "Success get assets list response",
       "headers": {
         "assets": {
@@ -303,18 +283,38 @@
           "items": {
             "type": "string"
           },
-          "example": "\"b5a302e740d0d84bbdc2254c97f1427b\"",
-          "description": "assets list"
+          "example": "\"[file1.txt, file2.txt, file3.txt]\"",
+          "description": "assets"
         }
       }
     },
-    "OkResponse": {
-      "description": "Common ok response",
+    "ErrorResponse": {
+      "description": "Common error response",
+      "headers": {
+        "error": {
+          "type": "string",
+          "example": "\"Internal server error\"",
+          "description": "error"
+        }
+      }
+    },
+    "StatusResponse": {
+      "description": "Common success response",
       "headers": {
         "status": {
           "type": "string",
           "example": "\"ok\"",
           "description": "status"
+        }
+      }
+    },
+    "TokenResponse": {
+      "description": "Success authenication response",
+      "headers": {
+        "token": {
+          "type": "string",
+          "example": "\"b5a302e740d0d84bbdc2254c97f1427b\"",
+          "description": "token"
         }
       }
     }

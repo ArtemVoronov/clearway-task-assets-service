@@ -31,7 +31,7 @@ const maxAttempts = 10
 //   - application/json
 //
 // responses:
-//   - 200: OkAuthResponse
+//   - 200: TokenResponse
 //   - 400: ErrorResponse
 //   - 500: ErrorResponse
 func Authenicate(w http.ResponseWriter, r *http.Request) error {
@@ -58,10 +58,7 @@ func Authenicate(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	slog.Info(fmt.Sprintf("user '%v' authenicated\n", user.Login))
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("{\"token\":\"%v\"}", token)))
-	return nil
+	return WriteJSON(w, http.StatusOK, TokenResponse{token})
 }
 
 func createOrUpdateToken(login, password, ipAddr string) (string, error) {
@@ -94,6 +91,9 @@ func processAuthError(err error) error {
 	}
 }
 
+var ErrMissedAuthorizationHeader = errors.New("missed 'Authorization' header")
+var ErrWrongAuthorizationHeader = errors.New("'Authorization' header must have the following format 'Bearer {token}'")
+
 func parseIpAddr(remoteAddr string) (string, error) {
 	matches := regExpIpAddr.FindStringSubmatch(remoteAddr)
 
@@ -107,18 +107,19 @@ func parseIpAddr(remoteAddr string) (string, error) {
 
 func parseAuthorizationHeader(authorizationHeader string) (string, error) {
 	if len(authorizationHeader) <= 0 {
-		return "", fmt.Errorf("missed 'Authorization' header")
+		return "", WithStatus(ErrMissedAuthorizationHeader, ErrMissedAuthorizationHeader.Error(), http.StatusUnauthorized)
 	}
 
 	if !strings.HasPrefix(authorizationHeader, "Bearer") {
-		return "", fmt.Errorf("supported only 'Authorization' header with Bearer token")
+
+		return "", WithStatus(ErrWrongAuthorizationHeader, ErrWrongAuthorizationHeader.Error(), http.StatusUnauthorized)
 	}
 
 	matches := regExpAuthHeaderBearerToken.FindStringSubmatch(authorizationHeader)
 
 	actualMathchesCount := len(matches)
 	if actualMathchesCount != 2 {
-		return "", fmt.Errorf("wrong len of matches")
+		return "", WithStatus(fmt.Errorf("unable to parse 'Authorization' header"), InternalServerErrorMsg, http.StatusInternalServerError)
 	}
 	result := matches[1]
 	return result, nil

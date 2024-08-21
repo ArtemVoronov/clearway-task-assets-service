@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -225,16 +226,16 @@ const InvalidCredentialsMsg = "Invalid credentials"
 const DuplicateAccessTokenMsg = "Duplicate access token generation"
 const UnauthorizedMsg = "Unauthorized"
 
-// Common ok response
-// swagger:response OkResponse
-type OkResponse struct {
+// Common success response
+// swagger:response StatusResponse
+type StatusResponse struct {
 	// status
 	// example: "ok"
 	Status string `json:"status"`
 }
 
 // Success authenication response
-// swagger:response OkAuthResponse
+// swagger:response TokenResponse
 type TokenResponse struct {
 	// token
 	// example: "b5a302e740d0d84bbdc2254c97f1427b"
@@ -242,17 +243,31 @@ type TokenResponse struct {
 }
 
 // Success get assets list response
-// swagger:response OkGetAssetsListResponse
+// swagger:response AssetsListResponse
 type AssetsListResponse struct {
-	// assets list
-	// example: "b5a302e740d0d84bbdc2254c97f1427b"
+	// assets
+	// example: "[file1.txt, file2.txt, file3.txt]"
 	AssetsList []string `json:"assets"`
 }
 
 // Common error response
 // swagger:response ErrorResponse
 type ErrorResponse struct {
-	// status
+	// error
 	// example: "Internal server error"
 	Error string `json:"error"`
+}
+
+func WriteJSON(w http.ResponseWriter, code int, obj any) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8application/json")
+	w.WriteHeader(code)
+	jsonBytes, err := json.Marshal(obj)
+	if err != nil {
+		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
+	}
+	_, err = w.Write(jsonBytes)
+	if err != nil {
+		return WithStatus(err, InternalServerErrorMsg, http.StatusInternalServerError)
+	}
+	return nil
 }

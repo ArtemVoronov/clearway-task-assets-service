@@ -39,7 +39,7 @@ type Credentials struct {
 //   - application/json
 //
 // responses:
-//   - 201: OkResponse
+//   - 201: StatusResponse
 //   - 400: ErrorResponse
 //   - 500: ErrorResponse
 func CreateUser(w http.ResponseWriter, r *http.Request) error {
@@ -73,10 +73,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`{"status":"ok"}`))
-	return nil
+	return WriteJSON(w, http.StatusCreated, StatusResponse{"ok"})
 }
 
 // swagger:parameters CreateUser Authenicate
