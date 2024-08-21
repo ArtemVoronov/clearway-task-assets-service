@@ -7,6 +7,10 @@ down() {
 purge() {
     docker volume rm clearway-task-assets-service_database-volume
     docker rmi clearway-task-assets-service-api:latest
+}
+
+rmi() {
+    docker rmi clearway-task-assets-service-api:latest
 }  
 
 build() {
@@ -32,7 +36,9 @@ generateSelfSignedCerts() {
 }
 
 generateSwagger() {
-    swagger generate spec -o ./api/swagger/swagger.json --scan-models
+    swagger generate spec -o ./api/swagger/swagger.json
+    # TODO: fix problem with models rendering
+    # swagger generate spec -o ./api/swagger/swagger.json --scan-models
 }
 
 db1() {
@@ -80,6 +86,14 @@ case "$1" in
   swagger)
     generateSwagger
     ;;
+  redocandstart)
+    down
+    generateSwagger
+    rmi
+    build
+    start
+    tail
+  ;;
   *)
-    echo "Usage: $0 {start|stop|tail|purge|certs|db1|db2|dbunsharded|swagger}"
+    echo "Usage: $0 {start|stop|tail|purge|certs|db1|db2|dbunsharded|swagger|redocandstart}"
 esac

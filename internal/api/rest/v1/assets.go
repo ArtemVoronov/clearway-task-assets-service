@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +18,20 @@ import (
 
 var regExpBoundaryString = regexp.MustCompile("^.+boundary=(.+)$")
 
+// swagger:route GET /api/assets assets LoadAssetsList
+//
+// # Get users's assets list
+//
+// ---
+// Produces:
+//   - application/json
+//
+// Security:
+// - Bearer: []
+//
+// responses:
+//   - 200: OkGetAssetsListResponse
+//   - 500: ErrorResponse
 func LoadAssetsList(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
 	slog.Info(fmt.Sprintf("attempt to load assets list for user '%v'\n", t.UserUUID))
 	list, err := services.Instance().AssetsService.GetAssetList(t.UserUUID)
@@ -35,6 +50,21 @@ func LoadAssetsList(w http.ResponseWriter, r *http.Request, t *services.AccessTo
 	return nil
 }
 
+// swagger:route GET /api/asset/{name} assets LoadAsset
+//
+// # Get users's asset by name
+//
+// ---
+// Produces:
+//   - application/json
+//
+// Security:
+// - Bearer: []
+//
+// responses:
+//   - 200: OkResponse
+//   - 404: ErrorResponse
+//   - 500: ErrorResponse
 func LoadAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
 	assetName := r.PathValue("name")
 	slog.Info(fmt.Sprintf("attempt to load asset '%v'\n", assetName))
@@ -55,6 +85,21 @@ func LoadAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) 
 	return nil
 }
 
+// swagger:route DELETE /api/asset/{name} assets DeleteAsset
+//
+// # Delete users's asset by name
+//
+// ---
+// Produces:
+//   - application/json
+//
+// Security:
+// - Bearer: []
+//
+// responses:
+//   - 200: OkResponse
+//   - 404: ErrorResponse
+//   - 500: ErrorResponse
 func DeleteAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
 	assetName := r.PathValue("name")
 	slog.Info(fmt.Sprintf("attempt to delete asset '%v'\n", assetName))
@@ -75,6 +120,24 @@ func DeleteAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken
 	return nil
 }
 
+// swagger:route POST /api/upload-asset/{name} assets StoreAsset
+//
+// # Store asset
+//
+// ---
+// Produces:
+//   - application/json
+//
+// Consumes:
+//   - any
+//
+// Security:
+// - Bearer: []
+//
+// responses:
+//   - 201: OkResponse
+//   - 400: ErrorResponse
+//   - 500: ErrorResponse
 func StoreAsset(w http.ResponseWriter, r *http.Request, t *services.AccessToken) error {
 	assetName := r.PathValue("name")
 	contentType := r.Header.Get("Content-Type")
@@ -155,4 +218,29 @@ func parseBoundaryString(contentTypeString string) (string, error) {
 	}
 	result := matches[1]
 	return result, nil
+}
+
+// swagger:parameters LoadAsset DeleteAsset
+type AssetsRequest struct {
+	// asset name
+	//
+	// in: path
+	// required: true
+	AssetName string `json:"name"`
+}
+
+// swagger:parameters StoreAsset
+type CreateAssetParams struct {
+	// asset name
+	//
+	// in: path
+	// required: true
+	AssetName string `json:"name"`
+
+	// asset data
+	//
+	// in: formData
+	// required: true
+	// swagger:file
+	Data *bytes.Buffer `json:"data"`
 }

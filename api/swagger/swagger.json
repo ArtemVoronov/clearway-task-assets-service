@@ -4,20 +4,319 @@
   ],
   "swagger": "2.0",
   "info": {
-    "title": "Assets Service:",
+    "description": "Assets Service",
     "version": "1.0"
   },
   "host": "localhost:3005",
   "basePath": "/",
-  "paths": {},
-  "definitions": {
-    "AppInfo": {
-      "description": "Used rendering cumulative information about the readiness and performance of the service",
-      "x-go-package": "github.com/ArtemVoronov/clearway-task-assets-service"
+  "paths": {
+    "/api/asset/{name}": {
+      "get": {
+        "security": [
+          {
+            "Bearer": [
+              "[]"
+            ]
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "assets"
+        ],
+        "summary": "Get users's asset by name",
+        "operationId": "LoadAsset",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "AssetName",
+            "description": "asset name",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/OkResponse"
+          },
+          "404": {
+            "$ref": "#/responses/ErrorResponse"
+          },
+          "500": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "Bearer": [
+              "[]"
+            ]
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "assets"
+        ],
+        "summary": "Delete users's asset by name",
+        "operationId": "DeleteAsset",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "AssetName",
+            "description": "asset name",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/OkResponse"
+          },
+          "404": {
+            "$ref": "#/responses/ErrorResponse"
+          },
+          "500": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
     },
-    "Credentials": {
-      "description": "Credentails represents the login and password pair. Used for authenication and creating users",
-      "x-go-package": "github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1"
+    "/api/assets": {
+      "get": {
+        "security": [
+          {
+            "Bearer": [
+              "[]"
+            ]
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "assets"
+        ],
+        "summary": "Get users's assets list",
+        "operationId": "LoadAssetsList",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/OkGetAssetsListResponse"
+          },
+          "500": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/api/auth": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "auth"
+        ],
+        "summary": "Authenicates user",
+        "operationId": "Authenicate",
+        "parameters": [
+          {
+            "example": "{\"login\": \"alice\", \"password\": \"secret\"}",
+            "description": "credentials of the user",
+            "name": "Credentials",
+            "in": "body",
+            "required": true,
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/OkAuthResponse"
+          },
+          "400": {
+            "$ref": "#/responses/ErrorResponse"
+          },
+          "500": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/api/upload-asset/{name}": {
+      "post": {
+        "security": [
+          {
+            "Bearer": [
+              "[]"
+            ]
+          }
+        ],
+        "consumes": [
+          "any"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "assets"
+        ],
+        "summary": "Store asset",
+        "operationId": "StoreAsset",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "AssetName",
+            "description": "asset name",
+            "name": "name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "file",
+            "x-go-name": "Data",
+            "description": "asset data",
+            "name": "data",
+            "in": "formData",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/OkResponse"
+          },
+          "400": {
+            "$ref": "#/responses/ErrorResponse"
+          },
+          "500": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "users"
+        ],
+        "summary": "Creates user",
+        "operationId": "CreateUser",
+        "parameters": [
+          {
+            "example": "{\"login\": \"alice\", \"password\": \"secret\"}",
+            "description": "credentials of the user",
+            "name": "Credentials",
+            "in": "body",
+            "required": true,
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/OkResponse"
+          },
+          "400": {
+            "$ref": "#/responses/ErrorResponse"
+          },
+          "500": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "application"
+        ],
+        "summary": "Cumulative information about the readiness and performance of the service",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/OkResponse"
+          },
+          "500": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "AppInfo": {
+      "description": "Cumulative information about the readiness and performance of the service",
+      "headers": {
+        "state": {
+          "type": "string",
+          "example": "\"running\"",
+          "description": "state"
+        },
+        "version": {
+          "type": "string",
+          "example": "\"1.0\"",
+          "description": "version"
+        }
+      }
+    },
+    "ErrorResponse": {
+      "description": "Common error response",
+      "headers": {
+        "error": {
+          "type": "string",
+          "example": "\"Internal server error\"",
+          "description": "status"
+        }
+      }
+    },
+    "OkAuthResponse": {
+      "description": "Success authenication response",
+      "headers": {
+        "token": {
+          "type": "string",
+          "example": "\"b5a302e740d0d84bbdc2254c97f1427b\"",
+          "description": "token"
+        }
+      }
+    },
+    "OkGetAssetsListResponse": {
+      "description": "Success get assets list response",
+      "headers": {
+        "assets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "example": "\"b5a302e740d0d84bbdc2254c97f1427b\"",
+          "description": "assets list"
+        }
+      }
+    },
+    "OkResponse": {
+      "description": "Common ok response",
+      "headers": {
+        "status": {
+          "type": "string",
+          "example": "\"ok\"",
+          "description": "status"
+        }
+      }
     }
   },
   "securityDefinitions": {

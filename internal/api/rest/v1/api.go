@@ -1,3 +1,17 @@
+// Assets Service
+//
+//	Schemes: https
+//	BasePath: /
+//	Version: 1.0
+//	Host: localhost:3005
+//
+//  SecurityDefinitions:
+//    Bearer:
+//      type: apiKey
+//      name: Authorization
+//      in: header
+//
+// swagger:meta
 package v1
 
 import (
@@ -210,3 +224,35 @@ const UserDuplicateMsg = "User exists already"
 const InvalidCredentialsMsg = "Invalid credentials"
 const DuplicateAccessTokenMsg = "Duplicate access token generation"
 const UnauthorizedMsg = "Unauthorized"
+
+// Common ok response
+// swagger:response OkResponse
+type OkResponse struct {
+	// status
+	// example: "ok"
+	Status string `json:"status"`
+}
+
+// Success authenication response
+// swagger:response OkAuthResponse
+type TokenResponse struct {
+	// token
+	// example: "b5a302e740d0d84bbdc2254c97f1427b"
+	Token string `json:"token"`
+}
+
+// Success get assets list response
+// swagger:response OkGetAssetsListResponse
+type AssetsListResponse struct {
+	// assets list
+	// example: "b5a302e740d0d84bbdc2254c97f1427b"
+	AssetsList []string `json:"assets"`
+}
+
+// Common error response
+// swagger:response ErrorResponse
+type ErrorResponse struct {
+	// status
+	// example: "Internal server error"
+	Error string `json:"error"`
+}

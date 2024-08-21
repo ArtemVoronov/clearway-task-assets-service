@@ -19,6 +19,21 @@ var regExpAuthHeaderBearerToken = regexp.MustCompile("^Bearer (.+)$")
 
 const maxAttempts = 10
 
+// swagger:route POST /api/auth auth Authenicate
+//
+// # Authenicates user
+//
+// ---
+// Produces:
+//   - application/json
+//
+// Consumes:
+//   - application/json
+//
+// responses:
+//   - 200: OkAuthResponse
+//   - 400: ErrorResponse
+//   - 500: ErrorResponse
 func Authenicate(w http.ResponseWriter, r *http.Request) error {
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()

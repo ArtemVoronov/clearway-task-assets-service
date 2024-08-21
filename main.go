@@ -1,25 +1,12 @@
-// Assets Service:
-//
-//	Schemes: https
-//	BasePath: /
-//	Version: 1.0
-//	Host: localhost:3005
-//
-//  SecurityDefinitions:
-//    Bearer:
-//      type: apiKey
-//      name: Authorization
-//      in: header
-// swagger:meta
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest"
 	v1 "github.com/ArtemVoronov/clearway-task-assets-service/internal/api/rest/v1"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app"
 	"github.com/ArtemVoronov/clearway-task-assets-service/internal/app/utils"
@@ -75,8 +62,8 @@ func initRestApiRoutes() (http.Handler, error) {
 	// API Spec
 	fs := http.FileServer(http.Dir("./api/swagger"))
 	routes.Handle("GET /api/doc/", http.StripPrefix("/api/doc/", fs))
-	routes.Handle("GET /api/", v1.ErrorHandleRequired(apiSpec))
-	routes.Handle("GET /health", v1.ErrorHandleRequired(health))
+	routes.Handle("GET /api/", v1.ErrorHandleRequired(rest.ApiSpec))
+	routes.Handle("GET /health", v1.ErrorHandleRequired(rest.Health))
 
 	bodyMaxSize, err := app.ParseBodyMaxSize()
 	if err != nil {
@@ -105,41 +92,4 @@ func initAppMonitoring() {
 			}
 		}()
 	}
-}
-
-func apiSpec(w http.ResponseWriter, r *http.Request) error {
-	spec, err := os.ReadFile("./api/swagger/swagger.json")
-	if err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(spec)
-	return nil
-}
-
-// Used rendering cumulative information about the readiness and performance of the service
-// swagger:model
-type AppInfo struct {
-	// version
-	//
-	// example: 1.0
-
-	Version string `json:"version"`
-	// state
-	//
-	// example: running
-	State string `json:"state"`
-}
-
-func health(w http.ResponseWriter, r *http.Request) error {
-	appInfo := AppInfo{"1.0", "running"}
-	result, err := json.Marshal(appInfo)
-	if err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
-	return nil
 }
