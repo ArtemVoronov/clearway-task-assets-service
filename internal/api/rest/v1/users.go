@@ -74,8 +74,8 @@ func CreateUser(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"ok"}`))
 	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(`{"status":"ok"}`))
 	return nil
 }
 
