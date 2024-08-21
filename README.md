@@ -10,7 +10,7 @@
 3. `./run.sh prepare`
 4. `./run.sh start`
 
-По-умолчанию приложение будет доступно по `https://localhost:3005`. Для остановки контейнеров можно использовать `./run.sh stop`. А если нужно остановить контейнеры, удалить контейнеры и volumes, то `./run.sh purge`
+По-умолчанию приложение будет доступно по `https://localhost:3005`. Для остановки контейнеров можно использовать `./run.sh stop`. Если нужно остановить контейнеры, удалить их и volumes - `./run.sh purge`
 
 ## На другой среде
 1. `git clone https://github.com/ArtemVoronov/clearway-task-assets-service.git`
