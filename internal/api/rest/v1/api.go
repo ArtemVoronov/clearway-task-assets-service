@@ -102,7 +102,7 @@ func (h *BodySizeLimitHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		processHttpError(w, WithStatus(err, fmt.Sprintf("body size exceeds the limit in %v bytes", h.bodyMaxSize), http.StatusBadRequest))
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, app.DefaultBodyMaxSize)
+	r.Body = http.MaxBytesReader(w, r.Body, int64(h.bodyMaxSize))
 	h.handler.ServeHTTP(w, r)
 }
 

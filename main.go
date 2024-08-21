@@ -42,6 +42,22 @@ func initAppServices() {
 	services.Instance()
 }
 
+func initAppMonitoring() {
+	enableRuntimeMonitoring, ok := os.LookupEnv("APP_ENABLE_RUNTIME_MONITORING")
+	if !ok {
+		enableRuntimeMonitoring = "false"
+	}
+
+	if enableRuntimeMonitoring == "true" {
+		go func() {
+			for {
+				time.Sleep(5 * time.Second)
+				utils.PrintMemUsage()
+			}
+		}()
+	}
+}
+
 func initRestApiRoutes() (http.Handler, error) {
 	routes := http.NewServeMux()
 	routes.Handle("GET /api/assets", v1.AuthRequired(v1.LoadAssetsList))
@@ -75,21 +91,7 @@ func initRestApiRoutes() (http.Handler, error) {
 
 func onShutdown() {
 	err := services.Instance().Shutdown()
-	log.Fatalf("error during services shutdown: %s", err)
-}
-
-func initAppMonitoring() {
-	enableRuntimeMonitoring, ok := os.LookupEnv("APP_ENABLE_RUNTIME_MONITORING")
-	if !ok {
-		enableRuntimeMonitoring = "false"
-	}
-
-	if enableRuntimeMonitoring == "true" {
-		go func() {
-			for {
-				time.Sleep(5 * time.Second)
-				utils.PrintMemUsage()
-			}
-		}()
+	if err != nil {
+		log.Fatalf("error during services shutdown: %s", err)
 	}
 }

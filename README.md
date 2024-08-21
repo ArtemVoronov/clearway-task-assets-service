@@ -69,8 +69,8 @@ CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,OPTIONS
 
 # Описание REST API
 
-- `GET /api/doc/` - HTML-страница Swagger UI со спецификацией сервиса в формате OpenAPI Specification 2.0
-- `GET /api/` - спецификация сервиса в формате OpenAPI Specification 2.0
+- `GET /api/doc` - HTML-страница Swagger UI со спецификацией сервиса в формате OpenAPI Specification 2.0
+- `GET /api` - спецификация сервиса в формате OpenAPI Specification 2.0
 - `GET /health` - кумулятивная информация о готовности и работоспособности сервиса
 - `POST /api/users` - создать пользователя, заголовок авторизации не требуется
 - `POST /api/auth` - аутентификация пользователя, заголовок авторизации не требуется
